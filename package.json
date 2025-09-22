@@ -1,0 +1,50 @@
+{
+  "name": "turbo-goreleaser",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Multi-component release automation for TurboRepo with GoReleaser Pro",
+  "main": "lib/main.js",
+  "scripts": {
+    "build": "tsc",
+    "format": "biome format --write",
+    "lint": "biome lint --write",
+    "package": "ncc build --source-map --license licenses.txt",
+    "test": "vitest",
+    "coverage": "vitest run --coverage",
+    "all": "npm run format && npm run lint && npm run test && npm run package"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jameswlane/turbo-goreleaser.git"
+  },
+  "keywords": [
+    "actions",
+    "turbo",
+    "turborepo",
+    "goreleaser",
+    "monorepo",
+    "release",
+    "semantic-release"
+  ],
+  "author": "James W Lane",
+  "license": "MIT",
+  "dependencies": {
+    "@actions/core": "^1.10.1",
+    "@actions/exec": "^1.1.1",
+    "@actions/github": "^6.0.0",
+    "@actions/glob": "^0.5.0",
+    "@actions/io": "^1.1.3",
+    "conventional-commits-parser": "^5.0.0",
+    "semver": "^7.6.3",
+    "yaml": "^2.5.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.2.4",
+    "@types/conventional-commits-parser": "^5.0.0",
+    "@types/node": "^22.5.0",
+    "@types/semver": "^7.5.8",
+    "@vercel/ncc": "^0.38.1",
+    "typescript": "^5.5.4",
+    "vitest": "^3.2.4"
+  }
+}
