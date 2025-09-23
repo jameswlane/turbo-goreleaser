@@ -187,3 +187,8 @@ export async function run(): Promise<void> {
     }
   }
 }
+
+// Execute the main function when the script is run directly
+if (require.main === module) {
+  run()
+}

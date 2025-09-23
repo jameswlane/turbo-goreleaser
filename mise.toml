@@ -1,5 +1,6 @@
 [tools]
 biome = "2.2.4"
+go = "1.23"
 lefthook = "latest"
 node = "22"
 pnpm = "10.17.0"

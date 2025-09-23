@@ -3,7 +3,7 @@
 [![CI](https://github.com/jameswlane/turbo-goreleaser/actions/workflows/ci.yml/badge.svg)](https://github.com/jameswlane/turbo-goreleaser/actions/workflows/ci.yml)
 [![GitHub Super-Linter](https://github.com/jameswlane/turbo-goreleaser/actions/workflows/linter.yml/badge.svg)](https://github.com/jameswlane/turbo-goreleaser/actions/workflows/linter.yml)
 
-Multi-component release automation for TurboRepo with GoReleaser Pro. This GitHub Action bridges the gap between TurboRepo's monorepo management and GoReleaser's powerful release capabilities.
+Multi-component release automation for TurboRepo with GoReleaser Pro. This GitHub Action bridges the gap between TurboRepo's monorepo management and GoReleaser's powerful release capabilities by building on top of the [goreleaser/goreleaser-action](https://github.com/goreleaser/goreleaser-action).
 
 ## Features
 
@@ -12,8 +12,9 @@ Multi-component release automation for TurboRepo with GoReleaser Pro. This GitHu
 - 📝 **Semantic Versioning**: Automatic version bumping based on conventional commits
 - 📄 **Changelog Generation**: Per-package changelogs with aggregated release notes
 - 🏷️ **Flexible Tag Formats**: Support for NPM-style, slash-separated, or standard tags
-- 📦 **GoReleaser Integration**: Seamless integration with GoReleaser and GoReleaser Pro
+- 📦 **GoReleaser Integration**: Built on top of [goreleaser/goreleaser-action](https://github.com/goreleaser/goreleaser-action) for reliability
 - 🌐 **Multi-Language Support**: Go, Bun, Rust, Zig, Deno, Python, UV, and Poetry builders
+- ⚡ **Efficient Environment Setup**: Uses [mise](https://mise.jdx.dev/) for fast, consistent tool management
 
 ## Quick Start
 
@@ -149,6 +150,15 @@ When `conventional-commits` is enabled, the action uses commit messages to deter
 
 ## GoReleaser Integration
 
+### Built on GoReleaser Action
+
+This action builds on top of [goreleaser/goreleaser-action@v6](https://github.com/goreleaser/goreleaser-action) to provide reliable GoReleaser execution. The approach provides:
+
+- **Consistent Installation**: Uses the same installation method as the goreleaser-action
+- **Version Compatibility**: Supports all versions and distributions (including GoReleaser Pro)
+- **Security**: Benefits from the security practices of the goreleaser-action
+- **Reliability**: Leverages a proven installation and execution method
+
 ### Automatic Configuration
 
 The action automatically generates GoReleaser configurations for monorepo packages:
@@ -172,6 +182,15 @@ builds:
 ### Custom Configuration
 
 If a `.goreleaser.yml` exists in your package directory, the action will use it and only add the necessary monorepo configuration.
+
+### Environment Setup
+
+The action uses [mise](https://mise.jdx.dev/) to automatically set up the required tools:
+- **Node.js**: For running the action logic
+- **Go**: For building Go projects with GoReleaser
+- **pnpm**: For efficient package management
+
+This ensures consistent, fast environment setup across all workflows.
 
 ## Examples
 

@@ -2,7 +2,6 @@ import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import * as core from '@actions/core'
 import * as exec from '@actions/exec'
-import * as io from '@actions/io'
 import * as yaml from 'yaml'
 import type { GoReleaserArtifact, PackageVersion } from './types'
 
@@ -171,9 +170,6 @@ export class GoReleaserConfig {
     }
 
     try {
-      // Install GoReleaser if not present
-      await this.installGoReleaser()
-
       // Set up environment variables
       const tagPrefix = this.getTagPrefix(packageVersion.name)
       const currentTag = tagPrefix + 'v' + packageVersion.newVersion
@@ -181,15 +177,6 @@ export class GoReleaserConfig {
       // Validate tag for security (prevent injection)
       if (!this.isValidTag(currentTag)) {
         throw new Error(`Invalid tag format: ${currentTag}`)
-      }
-
-      const env: Record<string, string> = {
-        ...process.env,
-        GORELEASER_CURRENT_TAG: currentTag
-      }
-
-      if (this.goreleaserKey) {
-        env['GORELEASER_KEY'] = this.goreleaserKey
       }
 
       // Validate config path for security
@@ -202,30 +189,8 @@ export class GoReleaserConfig {
         throw new Error(`Invalid package path: ${packageVersion.path}`)
       }
 
-      // Run GoReleaser
-      const args = ['release', '--clean', '--config', configPath]
-
-      if (this.dryRun) {
-        args.push('--skip=publish')
-        args.push('--skip=announce')
-      }
-
-      const output: string[] = []
-      const options: exec.ExecOptions = {
-        cwd: packageVersion.path,
-        env,
-        listeners: {
-          stdout: (data: Buffer) => {
-            output.push(data.toString())
-          }
-        }
-      }
-
-      const exitCode = await exec.exec('goreleaser', args, options)
-
-      if (exitCode !== 0) {
-        throw new Error(`GoReleaser failed with exit code ${exitCode}`)
-      }
+      // Use the GoReleaser GitHub Action instead of downloading the binary
+      await this.runGoReleaserAction(packageVersion, configPath, currentTag)
 
       // Parse artifacts from output
       const artifacts = await this.parseArtifacts(packageVersion.path)
@@ -238,58 +203,42 @@ export class GoReleaserConfig {
     }
   }
 
-  private async installGoReleaser(): Promise<void> {
-    // Check if GoReleaser is already installed
-    const goreleaserPath = await io.which('goreleaser', false)
-    if (goreleaserPath) {
-      core.debug('GoReleaser is already installed')
-      return
+  private async runGoReleaserAction(
+    packageVersion: PackageVersion,
+    configPath: string,
+    currentTag: string
+  ): Promise<void> {
+    core.info(`Running GoReleaser for ${packageVersion.name}`)
+
+    // Set up environment variables
+    const env: Record<string, string> = {
+      ...process.env,
+      GORELEASER_CURRENT_TAG: currentTag,
+      GITHUB_TOKEN: process.env['GITHUB_TOKEN'] || ''
     }
 
-    core.info('Installing GoReleaser...')
-
-    // Install GoReleaser using the official action's approach
-    const distribution = this.goreleaserKey ? 'goreleaser-pro' : 'goreleaser'
-
-    try {
-      // Download and install GoReleaser
-      const downloadUrl = await this.getDownloadUrl(distribution)
-
-      // Validate URL before using it
-      if (!this.isValidUrl(downloadUrl)) {
-        throw new Error(`Invalid download URL: ${downloadUrl}`)
-      }
-
-      // Use exec with proper argument separation for security - avoid shell injection
-      const tempScript = `/tmp/goreleaser-install-${Date.now()}-${Math.random().toString(36).substring(7)}.sh`
-
-      try {
-        // First download the script safely
-        await exec.exec('curl', ['-sfL', downloadUrl, '-o', tempScript])
-
-        // Then execute it with controlled arguments
-        await exec.exec('sh', [tempScript, '-b', '/usr/local/bin'])
-
-        core.info('GoReleaser installed successfully')
-      } finally {
-        // Clean up temporary file
-        try {
-          await exec.exec('rm', ['-f', tempScript])
-        } catch {
-          // Ignore cleanup errors
-        }
-      }
-    } catch (error) {
-      throw new Error(`Failed to install GoReleaser: ${error}`)
+    if (this.goreleaserKey) {
+      env['GORELEASER_KEY'] = this.goreleaserKey
     }
-  }
 
-  private async getDownloadUrl(distribution: string): Promise<string> {
-    // Construct the download URL based on distribution and version
-    if (distribution === 'goreleaser-pro') {
-      return 'https://goreleaser.com/pro/install.sh'
+    // Construct arguments for GoReleaser
+    const args = ['release', '--clean', '--config', configPath]
+
+    if (this.dryRun) {
+      args.push('--skip=publish', '--skip=announce')
     }
-    return 'https://install.goreleaser.com/github.com/goreleaser/goreleaser.sh'
+
+    const execOptions: exec.ExecOptions = {
+      cwd: packageVersion.path,
+      env
+    }
+
+    // GoReleaser is already installed by the goreleaser-action in our composite action
+    const exitCode = await exec.exec('goreleaser', args, execOptions)
+
+    if (exitCode !== 0) {
+      throw new Error(`GoReleaser failed with exit code ${exitCode}`)
+    }
   }
 
   private getTagPrefix(packageName: string): string {
@@ -345,21 +294,6 @@ export class GoReleaserConfig {
     }
 
     return artifacts
-  }
-  private isValidUrl(url: string): boolean {
-    try {
-      const parsedUrl = new URL(url)
-      // Only allow https URLs from trusted domains
-      return (
-        parsedUrl.protocol === 'https:' &&
-        (parsedUrl.hostname === 'github.com' ||
-          parsedUrl.hostname === 'goreleaser.com' ||
-          parsedUrl.hostname.endsWith('.github.com') ||
-          parsedUrl.hostname.endsWith('.goreleaser.com'))
-      )
-    } catch {
-      return false
-    }
   }
 
   private isValidPath(filePath: string): boolean {

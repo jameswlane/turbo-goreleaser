@@ -68,5 +68,37 @@ outputs:
     description: 'JSON metadata of GoReleaser build artifacts'
 
 runs:
-  using: 'node20'
-  main: 'dist/index.js'
+  using: 'composite'
+  steps:
+    - name: Setup mise
+      uses: jdx/mise-action@v2
+      with:
+        install: true
+        cache: true
+        install_args: "node pnpm go"
+
+    - name: Install GoReleaser
+      uses: goreleaser/goreleaser-action@v6
+      with:
+        distribution: ${{ inputs.goreleaser-key && 'goreleaser-pro' || 'goreleaser' }}
+        version: ${{ inputs.goreleaser-version }}
+        install-only: true
+
+    - name: Run Turbo GoReleaser
+      shell: bash
+      env:
+        INPUT_GITHUB_TOKEN: ${{ inputs.github-token }}
+        INPUT_GORELEASER_KEY: ${{ inputs.goreleaser-key }}
+        INPUT_GORELEASER_VERSION: ${{ inputs.goreleaser-version }}
+        INPUT_TURBO_TOKEN: ${{ inputs.turbo-token }}
+        INPUT_TURBO_TEAM: ${{ inputs.turbo-team }}
+        INPUT_RELEASE_TYPE: ${{ inputs.release-type }}
+        INPUT_TAG_FORMAT: ${{ inputs.tag-format }}
+        INPUT_DRY_RUN: ${{ inputs.dry-run }}
+        INPUT_CONVENTIONAL_COMMITS: ${{ inputs.conventional-commits }}
+        INPUT_WORKING_DIRECTORY: ${{ inputs.working-directory }}
+      run: |
+        cd ${{ github.action_path }}
+        pnpm install
+        pnpm run build
+        pnpm run start
