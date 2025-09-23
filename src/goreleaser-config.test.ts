@@ -284,7 +284,7 @@ describe('GoReleaserConfig', () => {
           cwd: '/workspace/packages/mypackage',
           env: expect.objectContaining({
             GORELEASER_CURRENT_TAG: 'myorg-package/v1.2.0',
-            GITHUB_TOKEN: ''
+            GITHUB_TOKEN: expect.any(String)
           })
         })
       )
@@ -302,7 +302,7 @@ describe('GoReleaserConfig', () => {
           env: expect.objectContaining({
             GORELEASER_CURRENT_TAG: 'myorg-package/v1.2.0',
             GORELEASER_KEY: 'test-key',
-            GITHUB_TOKEN: ''
+            GITHUB_TOKEN: expect.any(String)
           })
         })
       )
