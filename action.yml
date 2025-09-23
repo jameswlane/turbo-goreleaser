@@ -99,6 +99,4 @@ runs:
         INPUT_WORKING_DIRECTORY: ${{ inputs.working-directory }}
       run: |
         cd ${{ github.action_path }}
-        pnpm install
-        pnpm run build
-        pnpm run start
+        node dist/index.js
