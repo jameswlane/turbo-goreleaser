@@ -86,16 +86,16 @@ runs:
     - name: Run Turbo GoReleaser
       shell: bash
       env:
-        INPUT_GITHUB_TOKEN: ${{ inputs.github-token }}
-        INPUT_GORELEASER_KEY: ${{ inputs.goreleaser-key }}
-        INPUT_GORELEASER_VERSION: ${{ inputs.goreleaser-version }}
-        INPUT_TURBO_TOKEN: ${{ inputs.turbo-token }}
-        INPUT_TURBO_TEAM: ${{ inputs.turbo-team }}
-        INPUT_RELEASE_TYPE: ${{ inputs.release-type }}
-        INPUT_TAG_FORMAT: ${{ inputs.tag-format }}
-        INPUT_DRY_RUN: ${{ inputs.dry-run }}
-        INPUT_CONVENTIONAL_COMMITS: ${{ inputs.conventional-commits }}
-        INPUT_WORKING_DIRECTORY: ${{ inputs.working-directory }}
+        INPUT_GITHUB-TOKEN: ${{ inputs.github-token }}
+        INPUT_GORELEASER-KEY: ${{ inputs.goreleaser-key }}
+        INPUT_GORELEASER-VERSION: ${{ inputs.goreleaser-version }}
+        INPUT_TURBO-TOKEN: ${{ inputs.turbo-token }}
+        INPUT_TURBO-TEAM: ${{ inputs.turbo-team }}
+        INPUT_RELEASE-TYPE: ${{ inputs.release-type }}
+        INPUT_TAG-FORMAT: ${{ inputs.tag-format }}
+        INPUT_DRY-RUN: ${{ inputs.dry-run }}
+        INPUT_CONVENTIONAL-COMMITS: ${{ inputs.conventional-commits }}
+        INPUT_WORKING-DIRECTORY: ${{ inputs.working-directory }}
       run: |
         cd ${{ github.action_path }}
         node dist/index.js
