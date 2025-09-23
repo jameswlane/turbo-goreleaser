@@ -48,14 +48,14 @@ export class TurboIntegration {
 
     try {
       // Check for turbo.json to ensure we're in a Turbo monorepo
-      const turboConfigPath = path.join(this.workingDirectory, 'turbo.json')
+      const turboConfigPath = path.resolve(this.workingDirectory, 'turbo.json')
       await fs.access(turboConfigPath)
 
       // Look for packages in common monorepo locations
       const possibleLocations = ['apps', 'packages', 'services', 'libs']
 
       for (const location of possibleLocations) {
-        const dirPath = path.join(this.workingDirectory, location)
+        const dirPath = path.resolve(this.workingDirectory, location)
 
         try {
           const stat = await fs.stat(dirPath)
@@ -138,7 +138,8 @@ export class TurboIntegration {
             output += data.toString()
           }
         },
-        silent: true
+        silent: true,
+        timeout: 300000 // 5 minutes timeout
       }
 
       try {
@@ -180,20 +181,22 @@ export class TurboIntegration {
           }
         } catch (parseError) {
           core.warning(`Failed to parse Turbo output: ${parseError}`)
-          // Fall back to git-based detection
-          return this.detectChangedPackagesViaGit(packages)
+          return this.fallbackToGitDetection(packages, 'Failed to parse Turbo output')
         }
       } else {
-        // Fall back to git-based detection if turbo doesn't provide output
-        return this.detectChangedPackagesViaGit(packages)
+        return this.fallbackToGitDetection(packages, 'Turbo provided no output')
       }
     } catch (error) {
       core.warning(`Failed to detect changes with Turbo: ${error}`)
-      // Fall back to git-based detection
-      return this.detectChangedPackagesViaGit(packages)
+      return this.fallbackToGitDetection(packages, 'Turbo command failed')
     }
 
     return changedPackages
+  }
+
+  private async fallbackToGitDetection(packages: TurboPackageInfo[], reason: string): Promise<Package[]> {
+    core.info(`Falling back to git-based detection: ${reason}`)
+    return this.detectChangedPackagesViaGit(packages)
   }
 
   private async detectChangedPackagesViaGit(packages: TurboPackageInfo[]): Promise<Package[]> {

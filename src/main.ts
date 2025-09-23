@@ -11,6 +11,23 @@ import type { ActionInputs, ReleaseResult } from './types'
  * The main function for the action.
  * @returns {Promise<void>} Resolves when the action is complete.
  */
+function validateInputs(inputs: ActionInputs): void {
+  const validReleaseTypes = ['all', 'apps', 'packages']
+  const validTagFormats = ['npm', 'slash', 'standard']
+
+  if (!validReleaseTypes.includes(inputs.releaseType)) {
+    throw new Error(`Invalid release-type: ${inputs.releaseType}. Must be one of: ${validReleaseTypes.join(', ')}`)
+  }
+
+  if (!validTagFormats.includes(inputs.tagFormat)) {
+    throw new Error(`Invalid tag-format: ${inputs.tagFormat}. Must be one of: ${validTagFormats.join(', ')}`)
+  }
+
+  if (inputs.workingDirectory && !inputs.workingDirectory.match(/^[a-zA-Z0-9._/-]+$/)) {
+    throw new Error('Invalid working-directory: contains unsafe characters')
+  }
+}
+
 export async function run(): Promise<void> {
   try {
     // Parse inputs
@@ -26,6 +43,9 @@ export async function run(): Promise<void> {
       conventionalCommits: core.getBooleanInput('conventional-commits'),
       workingDirectory: core.getInput('working-directory')
     }
+
+    // Validate inputs
+    validateInputs(inputs)
 
     core.info('🚀 Starting Turbo GoReleaser')
     core.info(`Release type: ${inputs.releaseType}`)

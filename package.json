@@ -7,11 +7,12 @@
   "scripts": {
     "build": "tsc",
     "format": "biome format --write",
+    "format:check": "biome format",
     "lint": "biome lint --write",
     "package": "ncc build --source-map --license licenses.txt",
     "test": "vitest",
     "coverage": "vitest run --coverage",
-    "all": "npm run format && npm run lint && npm run test && npm run package"
+    "all": "pnpm format && pnpm lint && pnpm test && pnpm package"
   },
   "repository": {
     "type": "git",

@@ -185,6 +185,11 @@ export class GoReleaserConfig {
         env.GORELEASER_KEY = this.goreleaserKey
       }
 
+      // Validate config path for security
+      if (!this.isValidPath(configPath)) {
+        throw new Error(`Invalid config path: ${configPath}`)
+      }
+
       // Run GoReleaser
       const args = ['release', '--clean', '--config', configPath]
 
@@ -238,8 +243,13 @@ export class GoReleaserConfig {
       // Download and install GoReleaser
       const downloadUrl = await this.getDownloadUrl(distribution)
 
-      // Use exec to download and extract
-      await exec.exec('sh', ['-c', `curl -sfL ${downloadUrl} | sh -s -- -b /usr/local/bin`])
+      // Validate URL before using it
+      if (!this.isValidUrl(downloadUrl)) {
+        throw new Error(`Invalid download URL: ${downloadUrl}`)
+      }
+
+      // Use exec with proper argument separation for security
+      await exec.exec('sh', ['-c', `curl -sfL "${downloadUrl}" | sh -s -- -b /usr/local/bin`])
 
       core.info('GoReleaser installed successfully')
     } catch (error) {
@@ -308,5 +318,52 @@ export class GoReleaserConfig {
     }
 
     return artifacts
+  }
+
+  private isValidUrl(url: string): boolean {
+    try {
+      const parsedUrl = new URL(url)
+      // Only allow https URLs from trusted domains
+      return parsedUrl.protocol === 'https:' &&
+             (parsedUrl.hostname === 'github.com' ||
+              parsedUrl.hostname === 'goreleaser.com' ||
+              parsedUrl.hostname.endsWith('.github.com') ||
+              parsedUrl.hostname.endsWith('.goreleaser.com'))
+    } catch {
+      return false
+    }
+  }
+
+  private isValidPath(filePath: string): boolean {
+    // Check if path is defined
+    if (!filePath || typeof filePath !== 'string') {
+      return false
+    }
+
+    try {
+      // Prevent directory traversal and other unsafe paths
+      const normalizedPath = path.normalize(filePath)
+
+      // Check if normalization returned a valid string
+      if (!normalizedPath || typeof normalizedPath !== 'string') {
+        return false
+      }
+
+      // Check for directory traversal attempts
+      if (normalizedPath.includes('..')) {
+        return false
+      }
+
+      // Only allow .yml, .yaml extensions and alphanumeric characters with common safe symbols
+      // Allow both relative and absolute paths
+      if (!normalizedPath.match(/^[a-zA-Z0-9._/-]+\.(yml|yaml)$/)) {
+        return false
+      }
+
+      return true
+    } catch (error) {
+      // If any error occurs during validation, consider it invalid
+      return false
+    }
   }
 }

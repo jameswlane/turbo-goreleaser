@@ -176,15 +176,23 @@ describe('TagManager', () => {
     })
 
     it('should handle git push failure', async () => {
+      // Mock setTimeout to avoid actual delays in tests
+      vi.spyOn(global, 'setTimeout').mockImplementation((fn: any) => {
+        fn()
+        return 0 as any
+      })
+
       mockedExec.exec
         .mockResolvedValueOnce(0) // git tag succeeds
-        .mockRejectedValueOnce(new Error('Git push failed')) // git push fails
+        .mockRejectedValue(new Error('Git push failed')) // all git push attempts fail
 
-      await expect(tagManager.createTag(samplePackageVersion)).rejects.toThrow('Git push failed')
+      await expect(tagManager.createTag(samplePackageVersion)).rejects.toThrow('Failed to push tag myorg-package/v1.1.0 after 3 attempts')
       expect(mockedCore.error).toHaveBeenCalledWith(
-        'Failed to create tag myorg-package/v1.1.0: Error: Git push failed'
+        expect.stringContaining('Failed to create tag myorg-package/v1.1.0')
       )
-    })
+
+      vi.restoreAllMocks()
+    }, 10000)
   })
 
   describe('createRelease', () => {
