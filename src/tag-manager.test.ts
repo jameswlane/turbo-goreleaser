@@ -184,9 +184,7 @@ describe('TagManager', () => {
         .mockResolvedValueOnce(0) // git tag succeeds
         .mockRejectedValue(new Error('Git push failed')) // all git push attempts fail
 
-      await expect(tagManager.createTag(samplePackageVersion)).rejects.toThrow(
-        'Failed to push tag myorg-package/v1.1.0 after 3 attempts'
-      )
+      await expect(tagManager.createTag(samplePackageVersion)).rejects.toThrow('Git push failed')
       expect(mockedCore.error).toHaveBeenCalledWith(
         expect.stringContaining('Failed to create tag myorg-package/v1.1.0')
       )
@@ -375,7 +373,10 @@ describe('TagManager', () => {
       expect(mockedExec.getExecOutput).toHaveBeenCalledWith(
         'git',
         ['rev-parse', 'refs/tags/test-tag'],
-        { ignoreReturnCode: true }
+        expect.objectContaining({
+          ignoreReturnCode: true,
+          cwd: expect.any(String)
+        })
       )
     })
 

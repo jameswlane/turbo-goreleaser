@@ -45,17 +45,12 @@ function validateInputs(inputs: ActionInputs): void {
     )
   }
 
-  // Validate working directory using the dedicated validation function
+  // Validate and set working directory
+  const workspacePath = process.env['GITHUB_WORKSPACE'] || process.cwd()
   if (inputs.workingDirectory) {
     inputs.workingDirectory = validateWorkingDirectory(inputs.workingDirectory)
   } else {
-    inputs.workingDirectory = process.cwd()
-  }
-
-  // Validate that we're in a Git repository
-  const workspacePath = process.env['GITHUB_WORKSPACE'] || process.cwd()
-  if (!inputs.workingDirectory.startsWith(workspacePath)) {
-    throw new Error(`Working directory must be within the workspace: ${workspacePath}`)
+    inputs.workingDirectory = workspacePath
   }
 
   // Update inputs with defaults

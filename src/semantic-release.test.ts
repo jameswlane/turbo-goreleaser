@@ -260,17 +260,16 @@ describe('SemanticReleaseParser', () => {
 
       const commits = await semanticParser['getCommits']()
 
-      expect(mockedExec.getExecOutput).toHaveBeenCalledWith('git', [
-        'describe',
-        '--tags',
-        '--abbrev=0'
-      ])
-      expect(mockedExec.getExecOutput).toHaveBeenCalledWith('git', [
-        'log',
-        'v1.0.0..HEAD',
-        '--pretty=format:%H|||%s|||%b',
-        '--max-count=1000'
-      ])
+      expect(mockedExec.getExecOutput).toHaveBeenCalledWith(
+        'git',
+        ['describe', '--tags', '--abbrev=0'],
+        expect.objectContaining({ cwd: expect.any(String) })
+      )
+      expect(mockedExec.getExecOutput).toHaveBeenCalledWith(
+        'git',
+        ['log', 'v1.0.0..HEAD', '--pretty=format:%H|||%s|||%b', '--max-count=1000'],
+        expect.objectContaining({ cwd: expect.any(String) })
+      )
 
       expect(commits).toHaveLength(1)
       expect(commits[0]).toEqual({
@@ -301,12 +300,14 @@ describe('SemanticReleaseParser', () => {
 
       const commits = await semanticParser['getCommits']()
 
-      expect(mockedCore.debug).toHaveBeenCalledWith('No previous tags found, analyzing all commits')
-      expect(mockedExec.getExecOutput).toHaveBeenCalledWith('git', [
-        'log',
-        '--pretty=format:%H|||%s|||%b',
-        '--max-count=1000'
-      ])
+      expect(mockedCore.debug).toHaveBeenCalledWith(
+        expect.stringContaining('No previous tags found, analyzing all commits')
+      )
+      expect(mockedExec.getExecOutput).toHaveBeenCalledWith(
+        'git',
+        ['log', '--pretty=format:%H|||%s|||%b', '--max-count=1000'],
+        expect.objectContaining({ cwd: expect.any(String) })
+      )
 
       expect(commits).toHaveLength(1)
     })

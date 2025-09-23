@@ -121,7 +121,7 @@ describe('main', () => {
         'turbo-team': 'turbo_team',
         'release-type': 'packages',
         'tag-format': 'slash',
-        'working-directory': '/github/workspace'
+        'working-directory': ''
       }
       return inputs[name] || ''
     })
@@ -217,7 +217,7 @@ describe('main', () => {
 
       // Verify component initialization
       expect(mockedSemanticReleaseParser).toHaveBeenCalledWith({ enabled: true })
-      expect(mockedTurboIntegration).toHaveBeenCalledWith({ workingDirectory: '/workspace' })
+      expect(mockedTurboIntegration).toHaveBeenCalledWith({ workingDirectory: '/github/workspace' })
       expect(mockedTagManager).toHaveBeenCalledWith({
         octokit: mockOctokit,
         context: mockContext,
@@ -312,7 +312,8 @@ describe('main', () => {
     it('should handle missing optional inputs', async () => {
       mockedCore.getInput.mockImplementation((name: string) => {
         const requiredInputs: Record<string, string> = {
-          'github-token': 'gh_token'
+          'github-token': 'gh_token',
+          'working-directory': ''
         }
         return requiredInputs[name] || ''
       })
@@ -333,8 +334,12 @@ describe('main', () => {
 
     it('should handle different release types', async () => {
       mockedCore.getInput.mockImplementation((name: string) => {
-        if (name === 'release-type') return 'apps'
-        return name === 'github-token' ? 'gh_token' : ''
+        const inputs: Record<string, string> = {
+          'github-token': 'gh_token',
+          'release-type': 'apps',
+          'working-directory': ''
+        }
+        return inputs[name] || ''
       })
 
       await run()
@@ -573,7 +578,7 @@ describe('main', () => {
           case 'tag-format':
             return 'slash'
           case 'working-directory':
-            return './my-project'
+            return '/github/workspace/my-project'
           default:
             return ''
         }
