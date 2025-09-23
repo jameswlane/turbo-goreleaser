@@ -39,7 +39,7 @@ commit-msg:
   commands:
     conventional-commit:
       run: |
-        if ! grep -qE "^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?: .{1,50}" "$1"; then
+        if [ -f "$1" ] && ! grep -qE "^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?: .{1,50}" "$1"; then
           echo "❌ Commit message must follow conventional commits format:"
           echo "   type(scope): description"
           echo ""
