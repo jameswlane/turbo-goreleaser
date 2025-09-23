@@ -346,7 +346,6 @@ export class GoReleaserConfig {
 
     return artifacts
   }
-
   private isValidUrl(url: string): boolean {
     try {
       const parsedUrl = new URL(url)

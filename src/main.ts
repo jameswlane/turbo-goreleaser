@@ -44,7 +44,6 @@ function validateInputs(inputs: ActionInputs): void {
   inputs.releaseType = releaseType as 'all' | 'apps' | 'packages'
   inputs.tagFormat = tagFormat as 'npm' | 'slash' | 'standard'
 }
-
 export async function run(): Promise<void> {
   try {
     // Parse inputs

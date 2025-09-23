@@ -118,33 +118,18 @@ export class SemanticReleaseParser {
   private async filterCommitsForPackage(commits: Commit[], pkg: Package): Promise<Commit[]> {
     const relevantCommits: Commit[] = []
 
+    // Get all affected files for all commits in batch
+    const commitFileMap = await this.getCommitFilesBatch(commits)
+
     for (const commit of commits) {
-      try {
-        // Check if commit affects package files
-        const { stdout } = await exec.getExecOutput('git', [
-          'diff-tree',
-          '--no-commit-id',
-          '--name-only',
-          '-r',
-          commit.sha
-        ])
+      const files = commitFileMap.get(commit.sha) || []
+      const affectsPackage = files.some(file => {
+        // Check if file is in package directory
+        return file.startsWith(`${pkg.path}/`)
+      })
 
-        const files = stdout
-          .trim()
-          .split('\n')
-          .filter(f => f)
-
-        const affectsPackage = files.some(file => {
-          // Check if file is in package directory
-          return file.startsWith(`${pkg.path}/`)
-        })
-
-        if (affectsPackage) {
-          relevantCommits.push(commit)
-        }
-      } catch (error) {
-        // If git diff-tree fails, fall back to scope matching
-        core.debug(`Failed to get files for commit ${commit.sha}: ${error}`)
+      if (affectsPackage) {
+        relevantCommits.push(commit)
       }
 
       // Also check if commit scope matches package name
@@ -156,6 +141,73 @@ export class SemanticReleaseParser {
     }
 
     return relevantCommits
+  }
+
+  private async getCommitFilesBatch(commits: Commit[]): Promise<Map<string, string[]>> {
+    const commitFileMap = new Map<string, string[]>()
+
+    // Process commits in batches of 50 to avoid command line length limits
+    const batchSize = 50
+    for (let i = 0; i < commits.length; i += batchSize) {
+      const batch = commits.slice(i, i + batchSize)
+
+      try {
+        const { stdout } = await exec.getExecOutput('git', [
+          'diff-tree',
+          '--no-commit-id',
+          '--name-only',
+          '-r',
+          ...batch.map(c => c.sha)
+        ])
+
+        // Parse the batch output
+        const lines = stdout
+          .trim()
+          .split('\n')
+          .filter(line => line)
+        let currentCommitIndex = 0
+        let currentCommit = batch[currentCommitIndex]
+
+        for (const line of lines) {
+          // If line doesn't start with a path character, it's likely a new commit boundary
+          if (line.includes(' ') || !line.includes('/')) {
+            currentCommitIndex++
+            currentCommit = batch[currentCommitIndex]
+            continue
+          }
+
+          if (currentCommit) {
+            const files = commitFileMap.get(currentCommit.sha) || []
+            files.push(line)
+            commitFileMap.set(currentCommit.sha, files)
+          }
+        }
+      } catch (error) {
+        // Fall back to individual processing for this batch
+        core.debug(`Batch file processing failed, falling back to individual: ${error}`)
+        for (const commit of batch) {
+          try {
+            const { stdout } = await exec.getExecOutput('git', [
+              'diff-tree',
+              '--no-commit-id',
+              '--name-only',
+              '-r',
+              commit.sha
+            ])
+            const files = stdout
+              .trim()
+              .split('\n')
+              .filter(f => f)
+            commitFileMap.set(commit.sha, files)
+          } catch (individualError) {
+            core.debug(`Failed to check files for commit ${commit.sha}: ${individualError}`)
+            commitFileMap.set(commit.sha, [])
+          }
+        }
+      }
+    }
+
+    return commitFileMap
   }
 
   private isPackageScope(scope: string, packageName: string): boolean {
