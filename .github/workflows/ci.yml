@@ -65,6 +65,6 @@ jobs:
       - name: Run Action (Dry Run)
         uses: ./
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ github.token }}
           dry-run: 'true'
           release-type: 'all'

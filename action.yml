@@ -10,7 +10,6 @@ inputs:
   github-token:
     description: 'GitHub token for API operations'
     required: true
-    default: ${{ github.token }}
   
   goreleaser-key:
     description: 'GoReleaser Pro license key'
