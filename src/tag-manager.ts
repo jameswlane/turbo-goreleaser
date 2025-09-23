@@ -2,6 +2,9 @@ import * as core from '@actions/core'
 import * as exec from '@actions/exec'
 import type { Context } from '@actions/github/lib/context'
 import type { Octokit, PackageVersion } from './types'
+import { sanitizeTagName, createSafeExecOptions } from './validation'
+import { GIT_PUSH_MAX_RETRIES } from './constants'
+import { retryWithBackoff } from './retry'
 
 export interface TagManagerConfig {
   octokit: Octokit
@@ -39,20 +42,20 @@ export class TagManager {
         return tagName
       }
 
-      // Create the tag locally
-      await exec.exec('git', [
-        'tag',
-        '-a',
-        tagName,
-        '-m',
-        `Release ${packageVersion.name} v${packageVersion.newVersion}`
-      ])
+      // Create the tag locally with validation
+      const safeTagName = sanitizeTagName(tagName)
+      const safeMessage = `Release ${packageVersion.name} v${packageVersion.newVersion}`.replace(
+        /[`$]/g,
+        ''
+      )
+
+      await exec.exec('git', ['tag', '-a', safeTagName, '-m', safeMessage], createSafeExecOptions())
 
       // Push the tag to remote with retry logic
-      await this.pushTagWithRetry(tagName)
+      await this.pushTagWithRetry(safeTagName)
 
-      core.info(`Created and pushed tag: ${tagName}`)
-      return tagName
+      core.info(`Created and pushed tag: ${safeTagName}`)
+      return safeTagName
     } catch (error) {
       core.error(`Failed to create tag ${tagName}: ${error}`)
       throw error
@@ -144,10 +147,16 @@ export class TagManager {
 
   private async tagExists(tagName: string): Promise<boolean> {
     try {
-      // Check locally first
-      const { exitCode } = await exec.getExecOutput('git', ['rev-parse', `refs/tags/${tagName}`], {
-        ignoreReturnCode: true
-      })
+      // Check locally first with validation
+      const safeTagName = sanitizeTagName(tagName)
+      const { exitCode } = await exec.getExecOutput(
+        'git',
+        ['rev-parse', `refs/tags/${safeTagName}`],
+        {
+          ...createSafeExecOptions(),
+          ignoreReturnCode: true
+        }
+      )
 
       if (exitCode === 0) {
         return true
@@ -158,7 +167,7 @@ export class TagManager {
         await this.octokit.rest.git.getRef({
           owner: this.context.repo.owner,
           repo: this.context.repo.repo,
-          ref: `tags/${tagName}`
+          ref: `tags/${safeTagName}`
         })
         return true
       } catch {
@@ -169,28 +178,22 @@ export class TagManager {
     }
   }
 
-  private async pushTagWithRetry(tagName: string, maxRetries: number = 3): Promise<void> {
-    let lastError: Error | null = null
+  private async pushTagWithRetry(
+    tagName: string,
+    maxRetries: number = GIT_PUSH_MAX_RETRIES
+  ): Promise<void> {
+    const safeTagName = sanitizeTagName(tagName)
 
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        await exec.exec('git', ['push', 'origin', tagName])
-        return // Success
-      } catch (error) {
-        lastError = error as Error
-        core.warning(`Push attempt ${attempt}/${maxRetries} failed: ${error}`)
-
-        if (attempt < maxRetries) {
-          // Wait before retrying (exponential backoff)
-          const delay = 2 ** attempt * 1000 // 2s, 4s, 8s
-          core.info(`Retrying in ${delay}ms...`)
-          await new Promise(resolve => setTimeout(resolve, delay))
+    await retryWithBackoff(
+      async () => {
+        await exec.exec('git', ['push', 'origin', safeTagName], createSafeExecOptions())
+      },
+      {
+        maxAttempts: maxRetries,
+        onRetry: (error, attempt) => {
+          core.warning(`Push attempt ${attempt}/${maxRetries} failed: ${error.message}`)
         }
       }
-    }
-
-    throw new Error(
-      `Failed to push tag ${tagName} after ${maxRetries} attempts: ${lastError?.message}`
     )
   }
 

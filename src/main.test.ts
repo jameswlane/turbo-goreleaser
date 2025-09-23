@@ -102,6 +102,15 @@ describe('main', () => {
   beforeEach(() => {
     vi.clearAllMocks()
 
+    // Set up required environment variables
+    process.env.GITHUB_WORKSPACE = '/github/workspace'
+
+    // Mock Node version check
+    Object.defineProperty(process, 'version', {
+      value: 'v20.0.0',
+      configurable: true
+    })
+
     // Mock core inputs
     mockedCore.getInput.mockImplementation((name: string, options?: { required?: boolean }) => {
       const inputs: Record<string, string> = {
@@ -112,7 +121,7 @@ describe('main', () => {
         'turbo-team': 'turbo_team',
         'release-type': 'packages',
         'tag-format': 'slash',
-        'working-directory': '/workspace'
+        'working-directory': '/github/workspace'
       }
       return inputs[name] || ''
     })

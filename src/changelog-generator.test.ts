@@ -3,6 +3,7 @@ import type { Context } from '@actions/github/lib/context'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ChangelogGenerator } from '../src/changelog-generator'
 import type { ChangelogGeneratorConfig, Commit, Octokit, PackageVersion } from '../src/types'
+import { apiCache } from '../src/cache'
 
 // Mock @actions/core
 vi.mock('@actions/core')
@@ -58,6 +59,9 @@ describe('ChangelogGenerator', () => {
   beforeEach(() => {
     vi.clearAllMocks()
 
+    // Clear cache before each test
+    apiCache.clear()
+
     mockOctokit = {
       rest: {
         repos: {
@@ -104,6 +108,11 @@ describe('ChangelogGenerator', () => {
           author: {
             login: 'testuser'
           }
+        },
+        headers: {
+          'x-ratelimit-remaining': '59',
+          'x-ratelimit-reset': '1234567890',
+          'x-ratelimit-limit': '60'
         }
       })
 
@@ -127,6 +136,11 @@ describe('ChangelogGenerator', () => {
           author: {
             login: 'testuser'
           }
+        },
+        headers: {
+          'x-ratelimit-remaining': '59',
+          'x-ratelimit-reset': '1234567890',
+          'x-ratelimit-limit': '60'
         }
       })
     })
@@ -340,10 +354,20 @@ describe('ChangelogGenerator', () => {
       mockOctokit.rest.repos.getCommit = vi
         .fn()
         .mockResolvedValueOnce({
-          data: { author: { login: 'user1' } }
+          data: { author: { login: 'user1' } },
+          headers: {
+            'x-ratelimit-remaining': '59',
+            'x-ratelimit-reset': '1234567890',
+            'x-ratelimit-limit': '60'
+          }
         })
         .mockResolvedValueOnce({
-          data: { author: { login: 'user2' } }
+          data: { author: { login: 'user2' } },
+          headers: {
+            'x-ratelimit-remaining': '58',
+            'x-ratelimit-reset': '1234567890',
+            'x-ratelimit-limit': '60'
+          }
         })
 
       const contributors = await changelogGenerator.getContributors(commits)
@@ -356,7 +380,12 @@ describe('ChangelogGenerator', () => {
       const commits: Commit[] = [{ sha: 'abc123', message: 'commit1' }]
 
       mockOctokit.rest.repos.getCommit = vi.fn().mockResolvedValue({
-        data: { author: null }
+        data: { author: null },
+        headers: {
+          'x-ratelimit-remaining': '59',
+          'x-ratelimit-reset': '1234567890',
+          'x-ratelimit-limit': '60'
+        }
       })
 
       const contributors = await changelogGenerator.getContributors(commits)
@@ -385,13 +414,28 @@ describe('ChangelogGenerator', () => {
       mockOctokit.rest.repos.getCommit = vi
         .fn()
         .mockResolvedValueOnce({
-          data: { author: { login: 'zebra' } }
+          data: { author: { login: 'zebra' } },
+          headers: {
+            'x-ratelimit-remaining': '59',
+            'x-ratelimit-reset': '1234567890',
+            'x-ratelimit-limit': '60'
+          }
         })
         .mockResolvedValueOnce({
-          data: { author: { login: 'alpha' } }
+          data: { author: { login: 'alpha' } },
+          headers: {
+            'x-ratelimit-remaining': '58',
+            'x-ratelimit-reset': '1234567890',
+            'x-ratelimit-limit': '60'
+          }
         })
         .mockResolvedValueOnce({
-          data: { author: { login: 'beta' } }
+          data: { author: { login: 'beta' } },
+          headers: {
+            'x-ratelimit-remaining': '57',
+            'x-ratelimit-reset': '1234567890',
+            'x-ratelimit-limit': '60'
+          }
         })
 
       const contributors = await changelogGenerator.getContributors(commits)

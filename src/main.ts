@@ -6,6 +6,20 @@ import { SemanticReleaseParser } from './semantic-release'
 import { TagManager } from './tag-manager'
 import { TurboIntegration } from './turbo-integration'
 import type { ActionInputs, ReleaseResult } from './types'
+import { validateWorkingDirectory } from './validation'
+import { MIN_NODE_VERSION, REQUIRED_NODE_VERSION_MESSAGE } from './constants'
+
+/**
+ * Validates Node.js version
+ */
+function validateNodeVersion(): void {
+  const nodeVersion = process.version
+  const majorVersion = Number.parseInt(nodeVersion.slice(1).split('.')[0], 10)
+
+  if (majorVersion < MIN_NODE_VERSION) {
+    throw new Error(`${REQUIRED_NODE_VERSION_MESSAGE}. Current version: ${nodeVersion}`)
+  }
+}
 
 /**
  * The main function for the action.
@@ -31,13 +45,17 @@ function validateInputs(inputs: ActionInputs): void {
     )
   }
 
+  // Validate working directory using the dedicated validation function
   if (inputs.workingDirectory) {
-    if (
-      !inputs.workingDirectory.match(/^[a-zA-Z0-9._/-]+$/) ||
-      inputs.workingDirectory.includes('..')
-    ) {
-      throw new Error('Invalid working-directory: contains unsafe characters')
-    }
+    inputs.workingDirectory = validateWorkingDirectory(inputs.workingDirectory)
+  } else {
+    inputs.workingDirectory = process.cwd()
+  }
+
+  // Validate that we're in a Git repository
+  const workspacePath = process.env['GITHUB_WORKSPACE'] || process.cwd()
+  if (!inputs.workingDirectory.startsWith(workspacePath)) {
+    throw new Error(`Working directory must be within the workspace: ${workspacePath}`)
   }
 
   // Update inputs with defaults
@@ -46,6 +64,9 @@ function validateInputs(inputs: ActionInputs): void {
 }
 export async function run(): Promise<void> {
   try {
+    // Validate Node version first
+    validateNodeVersion()
+
     // Parse inputs
     const inputs: ActionInputs = {
       githubToken: core.getInput('github-token', { required: true }),

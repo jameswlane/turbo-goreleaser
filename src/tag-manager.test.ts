@@ -104,18 +104,16 @@ describe('TagManager', () => {
       const result = await tagManager.createTag(samplePackageVersion)
 
       expect(result).toBe('myorg-package/v1.1.0')
-      expect(mockedExec.exec).toHaveBeenCalledWith('git', [
-        'tag',
-        '-a',
-        'myorg-package/v1.1.0',
-        '-m',
-        'Release @myorg/package v1.1.0'
-      ])
-      expect(mockedExec.exec).toHaveBeenCalledWith('git', [
-        'push',
-        'origin',
-        'myorg-package/v1.1.0'
-      ])
+      expect(mockedExec.exec).toHaveBeenCalledWith(
+        'git',
+        ['tag', '-a', 'myorg-package/v1.1.0', '-m', 'Release @myorg/package v1.1.0'],
+        expect.objectContaining({ cwd: expect.any(String) })
+      )
+      expect(mockedExec.exec).toHaveBeenCalledWith(
+        'git',
+        ['push', 'origin', 'myorg-package/v1.1.0'],
+        expect.objectContaining({ cwd: expect.any(String) })
+      )
       expect(mockedCore.info).toHaveBeenCalledWith('Created and pushed tag: myorg-package/v1.1.0')
     })
 

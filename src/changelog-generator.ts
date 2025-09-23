@@ -1,6 +1,9 @@
 import * as core from '@actions/core'
 import type { Context } from '@actions/github/lib/context'
 import type { Commit, Octokit, PackageVersion } from './types'
+import { apiCache } from './cache'
+import { retryOnRetryableErrors } from './retry'
+import { GITHUB_API_MAX_RETRIES, MAX_CONCURRENT_OPERATIONS } from './constants'
 
 export interface ChangelogGeneratorConfig {
   octokit: Octokit
@@ -172,19 +175,64 @@ export class ChangelogGenerator {
       // Get unique commit SHAs
       const shas = [...new Set(commits.map(c => c.sha))]
 
-      for (const sha of shas) {
-        try {
-          const { data: commit } = await this.octokit.rest.repos.getCommit({
-            owner: this.context.repo.owner,
-            repo: this.context.repo.repo,
-            ref: sha
-          })
+      // Process commits in batches with rate limiting
+      const batchSize = MAX_CONCURRENT_OPERATIONS
+      for (let i = 0; i < shas.length; i += batchSize) {
+        const batch = shas.slice(i, i + batchSize)
 
-          if (commit.author?.login) {
-            contributors.add(commit.author.login)
+        // Check rate limit before batch
+        await apiCache.waitForRateLimit()
+
+        const batchPromises = batch.map(async sha => {
+          const cacheKey = `commit:${this.context.repo.owner}:${this.context.repo.repo}:${sha}`
+
+          try {
+            const commit = await apiCache.getOrFetch(cacheKey, async () => {
+              const result = await retryOnRetryableErrors(
+                async () => {
+                  const { data, headers } = await this.octokit.rest.repos.getCommit({
+                    owner: this.context.repo.owner,
+                    repo: this.context.repo.repo,
+                    ref: sha
+                  })
+
+                  // Update rate limit info from headers
+                  if (headers['x-ratelimit-remaining'] && headers['x-ratelimit-reset']) {
+                    apiCache.updateRateLimit(
+                      Number.parseInt(headers['x-ratelimit-remaining'] as string),
+                      Number.parseInt(headers['x-ratelimit-reset'] as string),
+                      Number.parseInt((headers['x-ratelimit-limit'] as string) || '60')
+                    )
+                  }
+
+                  return data
+                },
+                {
+                  maxAttempts: GITHUB_API_MAX_RETRIES,
+                  onRetry: (error, attempt) => {
+                    core.debug(
+                      `Retry ${attempt}/${GITHUB_API_MAX_RETRIES} for commit ${sha}: ${error.message}`
+                    )
+                  }
+                }
+              )
+              return result
+            })
+
+            if (commit.author?.login) {
+              contributors.add(commit.author.login)
+            }
+          } catch (error) {
+            core.debug(`Failed to get commit ${sha}: ${error}`)
           }
-        } catch (error) {
-          core.debug(`Failed to get commit ${sha}: ${error}`)
+        })
+
+        await Promise.all(batchPromises)
+
+        // Add delay between batches if rate limit is approaching
+        if (apiCache.isRateLimitApproaching() && i + batchSize < shas.length) {
+          core.debug('Rate limit approaching, adding delay between batches')
+          await new Promise(resolve => setTimeout(resolve, 1000))
         }
       }
     } catch (error) {

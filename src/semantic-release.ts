@@ -3,6 +3,8 @@ import * as exec from '@actions/exec'
 import conventionalCommitsParser from 'conventional-commits-parser'
 import * as semver from 'semver'
 import type { Commit, Package, PackageVersion } from './types'
+import { sanitizeGitRef, createSafeExecOptions } from './validation'
+import { MAX_COMMITS_TO_ANALYZE, COMMIT_BATCH_SIZE } from './constants'
 
 export interface SemanticReleaseConfig {
   enabled: boolean
@@ -70,20 +72,29 @@ export class SemanticReleaseParser {
       // Get the latest tag
       let lastTag = ''
       try {
-        const { stdout } = await exec.getExecOutput('git', ['describe', '--tags', '--abbrev=0'])
+        const { stdout } = await exec.getExecOutput(
+          'git',
+          ['describe', '--tags', '--abbrev=0'],
+          createSafeExecOptions()
+        )
         lastTag = stdout.trim()
-      } catch {
+      } catch (error) {
         // No tags found, will get all commits
-        core.debug('No previous tags found, analyzing all commits')
+        core.debug(`No previous tags found, analyzing all commits: ${error}`)
       }
 
       // Get commits since last tag (or all commits if no tag)
-      // Limit to 1000 commits to prevent memory issues in large repos
+      // Limit commits to prevent memory issues in large repos
       const args = lastTag
-        ? ['log', `${lastTag}..HEAD`, '--pretty=format:%H|||%s|||%b', '--max-count=1000']
-        : ['log', '--pretty=format:%H|||%s|||%b', '--max-count=1000']
+        ? [
+            'log',
+            `${sanitizeGitRef(lastTag)}..HEAD`,
+            '--pretty=format:%H|||%s|||%b',
+            `--max-count=${MAX_COMMITS_TO_ANALYZE}`
+          ]
+        : ['log', '--pretty=format:%H|||%s|||%b', `--max-count=${MAX_COMMITS_TO_ANALYZE}`]
 
-      const { stdout } = await exec.getExecOutput('git', args)
+      const { stdout } = await exec.getExecOutput('git', args, createSafeExecOptions())
       const lines = stdout
         .trim()
         .split('\n')
@@ -146,19 +157,19 @@ export class SemanticReleaseParser {
   private async getCommitFilesBatch(commits: Commit[]): Promise<Map<string, string[]>> {
     const commitFileMap = new Map<string, string[]>()
 
-    // Process commits in batches of 50 to avoid command line length limits
-    const batchSize = 50
+    // Process commits in batches to avoid command line length limits
+    const batchSize = COMMIT_BATCH_SIZE
     for (let i = 0; i < commits.length; i += batchSize) {
       const batch = commits.slice(i, i + batchSize)
 
       try {
-        const { stdout } = await exec.getExecOutput('git', [
-          'diff-tree',
-          '--no-commit-id',
-          '--name-only',
-          '-r',
-          ...batch.map(c => c.sha)
-        ])
+        // Validate SHA values before using them
+        const validatedShas = batch.map(c => sanitizeGitRef(c.sha))
+        const { stdout } = await exec.getExecOutput(
+          'git',
+          ['diff-tree', '--no-commit-id', '--name-only', '-r', ...validatedShas],
+          createSafeExecOptions()
+        )
 
         // Parse the batch output
         const lines = stdout
@@ -187,13 +198,11 @@ export class SemanticReleaseParser {
         core.debug(`Batch file processing failed, falling back to individual: ${error}`)
         for (const commit of batch) {
           try {
-            const { stdout } = await exec.getExecOutput('git', [
-              'diff-tree',
-              '--no-commit-id',
-              '--name-only',
-              '-r',
-              commit.sha
-            ])
+            const { stdout } = await exec.getExecOutput(
+              'git',
+              ['diff-tree', '--no-commit-id', '--name-only', '-r', sanitizeGitRef(commit.sha)],
+              createSafeExecOptions()
+            )
             const files = stdout
               .trim()
               .split('\n')

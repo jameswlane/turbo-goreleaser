@@ -3,6 +3,7 @@ import * as path from 'node:path'
 import * as core from '@actions/core'
 import * as exec from '@actions/exec'
 import type { Package } from './types'
+import { sanitizePath, sanitizeGitRef, createSafeExecOptions } from './validation'
 
 export interface TurboIntegrationConfig {
   workingDirectory: string
@@ -54,38 +55,55 @@ export class TurboIntegration {
       // Look for packages in common monorepo locations
       const possibleLocations = ['apps', 'packages', 'services', 'libs']
 
-      for (const location of possibleLocations) {
+      // Process locations in parallel for better performance
+      const locationPromises = possibleLocations.map(async location => {
         const dirPath = path.resolve(this.workingDirectory, location)
+        const locationPackages: TurboPackageInfo[] = []
 
         try {
           const stat = await fs.stat(dirPath)
           if (stat.isDirectory()) {
             const entries = await fs.readdir(dirPath, { withFileTypes: true })
 
-            for (const entry of entries) {
-              if (entry.isDirectory()) {
-                const packageJsonPath = path.join(dirPath, entry.name, 'package.json')
+            // Process directory entries in parallel
+            const entryPromises = entries
+              .filter(entry => entry.isDirectory())
+              .map(async entry => {
+                const packageJsonPath = sanitizePath(
+                  path.join(dirPath, entry.name, 'package.json'),
+                  this.workingDirectory
+                )
 
                 try {
                   const packageJson = await this.readPackageJson(packageJsonPath)
                   if (packageJson.name) {
-                    packages.push({
+                    return {
                       name: packageJson.name,
                       path: path.join(location, entry.name),
                       type: location === 'apps' ? 'app' : 'package'
-                    })
+                    } as TurboPackageInfo
                   }
                 } catch {
                   // Skip if no package.json
                   core.debug(`No package.json found in ${packageJsonPath}`)
                 }
-              }
-            }
+                return null
+              })
+
+            const results = await Promise.all(entryPromises)
+            locationPackages.push(...results.filter((pkg): pkg is TurboPackageInfo => pkg !== null))
           }
         } catch {
           // Directory doesn't exist, skip
           core.debug(`Directory ${dirPath} not found`)
         }
+
+        return locationPackages
+      })
+
+      const allLocationResults = await Promise.all(locationPromises)
+      for (const locationPackages of allLocationResults) {
+        packages.push(...locationPackages)
       }
 
       // Also check workspace configuration in root package.json
@@ -127,12 +145,12 @@ export class TurboIntegration {
     const changedPackages: Package[] = []
 
     try {
-      // Use turbo to detect affected packages
+      // Use turbo to detect affected packages with safe execution
       const args = ['run', 'build', '--affected', '--dry-run=json']
 
       let output = ''
       const options: exec.ExecOptions = {
-        cwd: this.workingDirectory,
+        ...createSafeExecOptions(this.workingDirectory),
         listeners: {
           stdout: (data: Buffer) => {
             output += data.toString()
@@ -165,7 +183,10 @@ export class TurboIntegration {
           // Map affected packages to our package list
           for (const pkg of packages) {
             if (affectedPackages.has(pkg.name)) {
-              const packageJsonPath = path.join(this.workingDirectory, pkg.path, 'package.json')
+              const packageJsonPath = sanitizePath(
+                path.join(this.workingDirectory, pkg.path, 'package.json'),
+                this.workingDirectory
+              )
               const packageJson = await this.readPackageJson(packageJsonPath)
 
               changedPackages.push({
@@ -205,17 +226,25 @@ export class TurboIntegration {
     const changedPackages: Package[] = []
 
     try {
-      // Get the base ref for comparison
-      const baseRef = process.env['GITHUB_BASE_REF'] || 'HEAD~1'
+      // Get the base ref for comparison with validation
+      const baseRef = sanitizeGitRef(process.env['GITHUB_BASE_REF'] || 'HEAD~1')
 
-      // Get list of changed files
-      const { stdout } = await exec.getExecOutput('git', ['diff', '--name-only', baseRef], {
-        cwd: this.workingDirectory
-      })
+      // Get list of changed files using git diff --name-status for more info
+      const { stdout } = await exec.getExecOutput(
+        'git',
+        ['diff', '--name-status', baseRef],
+        createSafeExecOptions(this.workingDirectory)
+      )
 
       const changedFiles = stdout
         .trim()
         .split('\n')
+        .filter(f => f)
+        .map(line => {
+          // Extract filename from status output (format: "M\tfilename")
+          const parts = line.split('\t')
+          return parts.length > 1 ? parts[1] : ''
+        })
         .filter(f => f)
 
       for (const pkg of packages) {
@@ -245,7 +274,9 @@ export class TurboIntegration {
 
   private async readPackageJson(packageJsonPath: string): Promise<PackageJson> {
     try {
-      const content = await fs.readFile(packageJsonPath, 'utf-8')
+      // Validate path is safe before reading
+      const safePath = sanitizePath(packageJsonPath, this.workingDirectory)
+      const content = await fs.readFile(safePath, 'utf-8')
       return JSON.parse(content) as PackageJson
     } catch (error) {
       throw new Error(`Failed to read package.json at ${packageJsonPath}: ${error}`)
