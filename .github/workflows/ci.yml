@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup mise
+        uses: jdx/mise-action@v2
+        with:
+          install: true
+          cache: true
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Run tests
+        run: pnpm test
+
+      - name: Run linter
+        run: pnpm lint
+
+      - name: Check formatting
+        run: pnpm format:check
+
+      - name: Build TypeScript
+        run: pnpm build
+
+      - name: Package
+        run: pnpm package
+
+  test-action:
+    name: Test Action
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup mise
+        uses: jdx/mise-action@v2
+        with:
+          install: true
+          cache: true
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build TypeScript
+        run: pnpm build
+
+      - name: Package
+        run: pnpm package
+
+      - name: Run Action (Dry Run)
+        uses: ./
+        with:
+          github-token: ${{ github.token }}
+          dry-run: 'true'
+          release-type: 'all'
