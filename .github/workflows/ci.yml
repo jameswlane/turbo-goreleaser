@@ -34,7 +34,10 @@ jobs:
       - name: Check formatting
         run: pnpm format:check
 
-      - name: Build
+      - name: Build TypeScript
+        run: pnpm build
+
+      - name: Package
         run: pnpm package
 
   test-action:
@@ -53,7 +56,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Build
+      - name: Build TypeScript
+        run: pnpm build
+
+      - name: Package
         run: pnpm package
 
       - name: Run Action (Dry Run)
