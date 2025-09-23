@@ -1,6 +1,6 @@
 import * as core from '@actions/core'
 import type { Context } from '@actions/github/lib/context'
-import type { Octokit, PackageVersion, Commit } from './types'
+import type { Commit, Octokit, PackageVersion } from './types'
 
 export interface ChangelogGeneratorConfig {
   octokit: Octokit

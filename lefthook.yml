@@ -1,0 +1,49 @@
+pre-commit:
+  parallel: true
+  commands:
+    format:
+      glob: "*.{ts,js,json,yml,yaml,md}"
+      run: pnpm format
+      stage_fixed: true
+
+    lint:
+      glob: "*.{ts,js}"
+      run: pnpm lint
+      stage_fixed: true
+
+    type-check:
+      glob: "*.{ts,js}"
+      run: pnpm build
+
+    test:
+      glob: "*.{ts,js}"
+      run: pnpm test:run
+
+    package:
+      glob: "src/**/*.{ts,js}"
+      run: pnpm package
+
+pre-push:
+  parallel: true
+  commands:
+    final-test:
+      run: pnpm test:run
+
+    final-build:
+      run: pnpm build
+
+    final-package:
+      run: pnpm package
+
+commit-msg:
+  commands:
+    conventional-commit:
+      run: |
+        if ! grep -qE "^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?: .{1,50}" "$1"; then
+          echo "❌ Commit message must follow conventional commits format:"
+          echo "   type(scope): description"
+          echo ""
+          echo "   Types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert"
+          echo "   Example: feat(api): add user authentication"
+          exit 1
+        fi

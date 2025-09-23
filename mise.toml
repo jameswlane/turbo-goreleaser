@@ -1,4 +1,5 @@
 [tools]
-biome = "latest"
+biome = "2.2.4"
+lefthook = "latest"
 node = "22"
-pnpm = "latest"
+pnpm = "10.17.0"

@@ -48,8 +48,8 @@ export class TagManager {
         `Release ${packageVersion.name} v${packageVersion.newVersion}`
       ])
 
-      // Push the tag to remote
-      await exec.exec('git', ['push', 'origin', tagName])
+      // Push the tag to remote with retry logic
+      await this.pushTagWithRetry(tagName)
 
       core.info(`Created and pushed tag: ${tagName}`)
       return tagName
@@ -167,6 +167,31 @@ export class TagManager {
     } catch {
       return false
     }
+  }
+
+  private async pushTagWithRetry(tagName: string, maxRetries: number = 3): Promise<void> {
+    let lastError: Error | null = null
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        await exec.exec('git', ['push', 'origin', tagName])
+        return // Success
+      } catch (error) {
+        lastError = error as Error
+        core.warning(`Push attempt ${attempt}/${maxRetries} failed: ${error}`)
+
+        if (attempt < maxRetries) {
+          // Wait before retrying (exponential backoff)
+          const delay = 2 ** attempt * 1000 // 2s, 4s, 8s
+          core.info(`Retrying in ${delay}ms...`)
+          await new Promise(resolve => setTimeout(resolve, delay))
+        }
+      }
+    }
+
+    throw new Error(
+      `Failed to push tag ${tagName} after ${maxRetries} attempts: ${lastError?.message}`
+    )
   }
 
   private isPrerelease(version: string): boolean {

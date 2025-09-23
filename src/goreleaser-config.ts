@@ -1,10 +1,10 @@
+import * as fs from 'node:fs/promises'
+import * as path from 'node:path'
 import * as core from '@actions/core'
 import * as exec from '@actions/exec'
 import * as io from '@actions/io'
-import * as fs from 'node:fs/promises'
-import * as path from 'node:path'
 import * as yaml from 'yaml'
-import type { PackageVersion, GoReleaserArtifact } from './types'
+import type { GoReleaserArtifact, PackageVersion } from './types'
 
 export interface GoReleaserConfigOptions {
   goreleaserKey?: string
@@ -175,14 +175,31 @@ export class GoReleaserConfig {
       await this.installGoReleaser()
 
       // Set up environment variables
+      const tagPrefix = this.getTagPrefix(packageVersion.name)
+      const currentTag = tagPrefix + 'v' + packageVersion.newVersion
+
+      // Validate tag for security (prevent injection)
+      if (!this.isValidTag(currentTag)) {
+        throw new Error(`Invalid tag format: ${currentTag}`)
+      }
+
       const env: Record<string, string> = {
         ...process.env,
-        GORELEASER_CURRENT_TAG:
-          this.getTagPrefix(packageVersion.name) + 'v' + packageVersion.newVersion
+        GORELEASER_CURRENT_TAG: currentTag
       }
 
       if (this.goreleaserKey) {
-        env.GORELEASER_KEY = this.goreleaserKey
+        env['GORELEASER_KEY'] = this.goreleaserKey
+      }
+
+      // Validate config path for security
+      if (!this.isValidPath(configPath)) {
+        throw new Error(`Invalid config path: ${configPath}`)
+      }
+
+      // Validate package path for security
+      if (!this.isValidPackagePath(packageVersion.path)) {
+        throw new Error(`Invalid package path: ${packageVersion.path}`)
       }
 
       // Run GoReleaser
@@ -238,10 +255,30 @@ export class GoReleaserConfig {
       // Download and install GoReleaser
       const downloadUrl = await this.getDownloadUrl(distribution)
 
-      // Use exec to download and extract
-      await exec.exec('sh', ['-c', `curl -sfL ${downloadUrl} | sh -s -- -b /usr/local/bin`])
+      // Validate URL before using it
+      if (!this.isValidUrl(downloadUrl)) {
+        throw new Error(`Invalid download URL: ${downloadUrl}`)
+      }
 
-      core.info('GoReleaser installed successfully')
+      // Use exec with proper argument separation for security - avoid shell injection
+      const tempScript = `/tmp/goreleaser-install-${Date.now()}-${Math.random().toString(36).substring(7)}.sh`
+
+      try {
+        // First download the script safely
+        await exec.exec('curl', ['-sfL', downloadUrl, '-o', tempScript])
+
+        // Then execute it with controlled arguments
+        await exec.exec('sh', [tempScript, '-b', '/usr/local/bin'])
+
+        core.info('GoReleaser installed successfully')
+      } finally {
+        // Clean up temporary file
+        try {
+          await exec.exec('rm', ['-f', tempScript])
+        } catch {
+          // Ignore cleanup errors
+        }
+      }
     } catch (error) {
       throw new Error(`Failed to install GoReleaser: ${error}`)
     }
@@ -308,5 +345,113 @@ export class GoReleaserConfig {
     }
 
     return artifacts
+  }
+
+  private isValidUrl(url: string): boolean {
+    try {
+      const parsedUrl = new URL(url)
+      // Only allow https URLs from trusted domains
+      return (
+        parsedUrl.protocol === 'https:' &&
+        (parsedUrl.hostname === 'github.com' ||
+          parsedUrl.hostname === 'goreleaser.com' ||
+          parsedUrl.hostname.endsWith('.github.com') ||
+          parsedUrl.hostname.endsWith('.goreleaser.com'))
+      )
+    } catch {
+      return false
+    }
+  }
+
+  private isValidPath(filePath: string): boolean {
+    // Check if path is defined
+    if (!filePath || typeof filePath !== 'string') {
+      return false
+    }
+
+    try {
+      // Prevent directory traversal and other unsafe paths
+      const normalizedPath = path.normalize(filePath)
+
+      // Check if normalization returned a valid string
+      if (!normalizedPath || typeof normalizedPath !== 'string') {
+        return false
+      }
+
+      // Check for directory traversal attempts
+      if (normalizedPath.includes('..')) {
+        return false
+      }
+
+      // Only allow .yml, .yaml extensions and alphanumeric characters with common safe symbols
+      // Allow both relative and absolute paths
+      if (!normalizedPath.match(/^\/?(\.\/)?[a-zA-Z0-9._/-]+\.(yml|yaml)$/)) {
+        return false
+      }
+
+      return true
+    } catch (error) {
+      // If any error occurs during validation, consider it invalid
+      return false
+    }
+  }
+
+  private isValidPackagePath(packagePath: string): boolean {
+    // Check if path is defined
+    if (!packagePath || typeof packagePath !== 'string') {
+      return false
+    }
+
+    try {
+      // Prevent directory traversal and other unsafe paths
+      const normalizedPath = path.normalize(packagePath)
+
+      // Check if normalization returned a valid string
+      if (!normalizedPath || typeof normalizedPath !== 'string') {
+        return false
+      }
+
+      // Check for directory traversal attempts
+      if (normalizedPath.includes('..')) {
+        return false
+      }
+
+      // Only allow alphanumeric characters, hyphens, underscores, dots, and forward slashes
+      // Allow both relative and absolute paths, but with reasonable length
+      if (!normalizedPath.match(/^[a-zA-Z0-9._/-]+$/) || normalizedPath.length > 200) {
+        return false
+      }
+
+      // Additional security: should not contain common dangerous paths
+      const dangerousPaths = ['/etc', '/usr/bin', '/bin', '/sbin', '/root', '/home']
+      if (dangerousPaths.some(dangerous => normalizedPath.startsWith(dangerous))) {
+        return false
+      }
+
+      return true
+    } catch (error) {
+      // If any error occurs during validation, consider it invalid
+      return false
+    }
+  }
+
+  private isValidTag(tag: string): boolean {
+    // Check if tag is defined
+    if (!tag || typeof tag !== 'string') {
+      return false
+    }
+
+    // Tag should only contain alphanumeric characters, hyphens, underscores, dots, slashes, and 'v'
+    // No spaces, quotes, or other shell metacharacters
+    if (!tag.match(/^[a-zA-Z0-9._/v-]+$/)) {
+      return false
+    }
+
+    // Reasonable length limit
+    if (tag.length > 100) {
+      return false
+    }
+
+    return true
   }
 }

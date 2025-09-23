@@ -1,13 +1,13 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import * as core from '@actions/core'
 import * as github from '@actions/github'
-import { run } from './main'
-import { SemanticReleaseParser } from './semantic-release'
-import { TurboIntegration } from './turbo-integration'
-import { TagManager } from './tag-manager'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ChangelogGenerator } from './changelog-generator'
 import { GoReleaserConfig } from './goreleaser-config'
-import type { Package, PackageVersion, ReleaseResult, GoReleaserArtifact } from './types'
+import { run } from './main'
+import { SemanticReleaseParser } from './semantic-release'
+import { TagManager } from './tag-manager'
+import { TurboIntegration } from './turbo-integration'
+import type { GoReleaserArtifact, Package, PackageVersion, ReleaseResult } from './types'
 
 // Mock all dependencies
 vi.mock('@actions/core')
@@ -487,6 +487,92 @@ describe('main', () => {
       expect(mockedCore.info).toHaveBeenCalledWith('Version bumps:')
       expect(mockedCore.info).toHaveBeenCalledWith('  - @myorg/package-a: 1.0.0 → 1.1.0')
       expect(mockedCore.info).toHaveBeenCalledWith('  - @myorg/package-b: 2.0.0 → 2.0.1')
+    })
+  })
+
+  describe('input validation', () => {
+    it('should validate release-type input', async () => {
+      mockedCore.getInput.mockImplementation(name => {
+        switch (name) {
+          case 'github-token':
+            return 'gh_token'
+          case 'release-type':
+            return 'invalid-type'
+          default:
+            return ''
+        }
+      })
+
+      await run()
+
+      expect(mockedCore.setFailed).toHaveBeenCalledWith(
+        'Invalid release-type: invalid-type. Must be one of: all, apps, packages'
+      )
+    })
+
+    it('should validate tag-format input', async () => {
+      mockedCore.getInput.mockImplementation(name => {
+        switch (name) {
+          case 'github-token':
+            return 'gh_token'
+          case 'release-type':
+            return 'all' // Valid release type
+          case 'tag-format':
+            return 'invalid-format'
+          default:
+            return ''
+        }
+      })
+
+      await run()
+
+      expect(mockedCore.setFailed).toHaveBeenCalledWith(
+        'Invalid tag-format: invalid-format. Must be one of: npm, slash, standard'
+      )
+    })
+
+    it('should validate working-directory input for unsafe characters', async () => {
+      mockedCore.getInput.mockImplementation(name => {
+        switch (name) {
+          case 'github-token':
+            return 'gh_token'
+          case 'release-type':
+            return 'all' // Valid release type
+          case 'tag-format':
+            return 'slash' // Valid tag format
+          case 'working-directory':
+            return '../../../etc/passwd'
+          default:
+            return ''
+        }
+      })
+
+      await run()
+
+      expect(mockedCore.setFailed).toHaveBeenCalledWith(
+        'Invalid working-directory: contains unsafe characters'
+      )
+    })
+
+    it('should accept valid inputs', async () => {
+      mockedCore.getInput.mockImplementation(name => {
+        switch (name) {
+          case 'github-token':
+            return 'gh_token'
+          case 'release-type':
+            return 'packages'
+          case 'tag-format':
+            return 'slash'
+          case 'working-directory':
+            return './my-project'
+          default:
+            return ''
+        }
+      })
+
+      await run()
+
+      expect(mockedCore.setFailed).not.toHaveBeenCalled()
     })
   })
 })

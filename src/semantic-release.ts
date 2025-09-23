@@ -2,7 +2,7 @@ import * as core from '@actions/core'
 import * as exec from '@actions/exec'
 import conventionalCommitsParser from 'conventional-commits-parser'
 import * as semver from 'semver'
-import type { Package, PackageVersion, Commit } from './types'
+import type { Commit, Package, PackageVersion } from './types'
 
 export interface SemanticReleaseConfig {
   enabled: boolean
@@ -44,7 +44,7 @@ export class SemanticReleaseParser {
         const currentVersion = pkg.version || '0.0.0'
         const newVersion = semver.inc(currentVersion, releaseType)
 
-        if (newVersion) {
+        if (newVersion && this.isValidVersionUpgrade(currentVersion, newVersion)) {
           packageVersions.push({
             ...pkg,
             currentVersion,
@@ -52,6 +52,10 @@ export class SemanticReleaseParser {
             releaseType,
             commits: relevantCommits
           })
+        } else if (newVersion) {
+          core.warning(
+            `Skipping ${pkg.name}: new version ${newVersion} is not greater than current ${currentVersion}`
+          )
         }
       }
     }
@@ -74,9 +78,10 @@ export class SemanticReleaseParser {
       }
 
       // Get commits since last tag (or all commits if no tag)
+      // Limit to 1000 commits to prevent memory issues in large repos
       const args = lastTag
-        ? ['log', `${lastTag}..HEAD`, '--pretty=format:%H|||%s|||%b`']
-        : ['log', '--pretty=format:%H|||%s|||%b']
+        ? ['log', `${lastTag}..HEAD`, '--pretty=format:%H|||%s|||%b', '--max-count=1000']
+        : ['log', '--pretty=format:%H|||%s|||%b', '--max-count=1000']
 
       const { stdout } = await exec.getExecOutput('git', args)
       const lines = stdout
@@ -114,8 +119,8 @@ export class SemanticReleaseParser {
     const relevantCommits: Commit[] = []
 
     for (const commit of commits) {
-      // Check if commit affects this package
       try {
+        // Check if commit affects package files
         const { stdout } = await exec.getExecOutput('git', [
           'diff-tree',
           '--no-commit-id',
@@ -128,6 +133,7 @@ export class SemanticReleaseParser {
           .trim()
           .split('\n')
           .filter(f => f)
+
         const affectsPackage = files.some(file => {
           // Check if file is in package directory
           return file.startsWith(`${pkg.path}/`)
@@ -137,10 +143,11 @@ export class SemanticReleaseParser {
           relevantCommits.push(commit)
         }
       } catch (error) {
-        core.debug(`Failed to check files for commit ${commit.sha}: ${error}`)
+        // If git diff-tree fails, fall back to scope matching
+        core.debug(`Failed to get files for commit ${commit.sha}: ${error}`)
       }
 
-      // Also check if commit scope matches package name (outside try-catch)
+      // Also check if commit scope matches package name
       if (commit.scope && this.isPackageScope(commit.scope, pkg.name)) {
         if (!relevantCommits.find(c => c.sha === commit.sha)) {
           relevantCommits.push(commit)
@@ -183,5 +190,14 @@ export class SemanticReleaseParser {
     }
 
     return releaseType
+  }
+
+  private isValidVersionUpgrade(currentVersion: string, newVersion: string): boolean {
+    try {
+      return semver.gt(newVersion, currentVersion)
+    } catch (error) {
+      core.warning(`Invalid version comparison: ${currentVersion} -> ${newVersion}: ${error}`)
+      return false
+    }
   }
 }

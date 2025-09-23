@@ -1,9 +1,9 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import * as core from '@actions/core'
 import * as exec from '@actions/exec'
 import * as io from '@actions/io'
 import * as fs from 'fs/promises'
 import * as path from 'path'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import * as yaml from 'yaml'
 import { GoReleaserConfig, type GoReleaserConfigOptions } from './goreleaser-config'
 import type { PackageVersion } from './types'
@@ -261,6 +261,7 @@ describe('GoReleaserConfig', () => {
       mockedIo.which.mockResolvedValue('/usr/local/bin/goreleaser')
       mockedExec.exec.mockResolvedValue(0)
       mockedFs.readdir.mockResolvedValue([])
+      mockedPath.normalize.mockImplementation((p: string) => p) // Return path as-is for tests
     })
 
     it('should return empty array in dry run mode', async () => {
@@ -277,28 +278,38 @@ describe('GoReleaserConfig', () => {
     it('should install GoReleaser if not present', async () => {
       const configWithoutKey = new GoReleaserConfig({ dryRun: false })
       mockedIo.which.mockResolvedValue('')
-      mockedExec.exec.mockResolvedValueOnce(0) // install
+      mockedExec.exec.mockResolvedValueOnce(0) // download script
+      mockedExec.exec.mockResolvedValueOnce(0) // execute script
+      mockedExec.exec.mockResolvedValueOnce(0) // cleanup
       mockedExec.exec.mockResolvedValueOnce(0) // release
 
       await configWithoutKey.runGoReleaser(samplePackageVersion, configPath)
 
       expect(mockedCore.info).toHaveBeenCalledWith('Installing GoReleaser...')
-      expect(mockedExec.exec).toHaveBeenCalledWith('sh', [
-        '-c',
-        'curl -sfL https://install.goreleaser.com/github.com/goreleaser/goreleaser.sh | sh -s -- -b /usr/local/bin'
+      // Check for secure download (no shell injection)
+      expect(mockedExec.exec).toHaveBeenCalledWith('curl', [
+        '-sfL',
+        'https://install.goreleaser.com/github.com/goreleaser/goreleaser.sh',
+        '-o',
+        expect.stringMatching(/^\/tmp\/goreleaser-install-.+\.sh$/)
       ])
     })
 
     it('should install GoReleaser Pro when key is provided', async () => {
       mockedIo.which.mockResolvedValue('')
-      mockedExec.exec.mockResolvedValueOnce(0) // install
+      mockedExec.exec.mockResolvedValueOnce(0) // download script
+      mockedExec.exec.mockResolvedValueOnce(0) // execute script
+      mockedExec.exec.mockResolvedValueOnce(0) // cleanup
       mockedExec.exec.mockResolvedValueOnce(0) // release
 
       await goreleaserConfig.runGoReleaser(samplePackageVersion, configPath)
 
-      expect(mockedExec.exec).toHaveBeenCalledWith('sh', [
-        '-c',
-        'curl -sfL https://goreleaser.com/pro/install.sh | sh -s -- -b /usr/local/bin'
+      // Check for secure download (no shell injection)
+      expect(mockedExec.exec).toHaveBeenCalledWith('curl', [
+        '-sfL',
+        'https://goreleaser.com/pro/install.sh',
+        '-o',
+        expect.stringMatching(/^\/tmp\/goreleaser-install-.+\.sh$/)
       ])
     })
 

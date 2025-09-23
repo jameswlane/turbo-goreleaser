@@ -1,8 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import * as core from '@actions/core'
-import * as exec from '@actions/exec'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
+import * as core from '@actions/core'
+import * as exec from '@actions/exec'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { TurboIntegration } from './turbo-integration'
 import type { Package } from './types'
 
@@ -12,10 +12,10 @@ vi.mock('@actions/exec')
 vi.mock('node:fs/promises')
 vi.mock('node:path')
 
-const mockedCore = vi.mocked(core)
+const _mockedCore = vi.mocked(core)
 const mockedExec = vi.mocked(exec)
 const mockedFs = vi.mocked(fs)
-const mockedPath = vi.mocked(path)
+const _mockedPath = vi.mocked(path)
 
 describe('TurboIntegration', () => {
   let turboIntegration: TurboIntegration
@@ -34,7 +34,7 @@ describe('TurboIntegration', () => {
   describe('getChangedPackages', () => {
     it('should return packages based on release type', async () => {
       // Mock the internal methods for a basic test
-      const mockPackages: Package[] = [
+      const _mockPackages: Package[] = [
         {
           name: '@myorg/app',
           path: 'apps/myapp',

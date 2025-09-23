@@ -1,8 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
 import * as core from '@actions/core'
-import { ChangelogGenerator } from '../src/changelog-generator'
-import type { ChangelogGeneratorConfig, PackageVersion, Commit, Octokit } from '../src/types'
 import type { Context } from '@actions/github/lib/context'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { ChangelogGenerator } from '../src/changelog-generator'
+import type { ChangelogGeneratorConfig, Commit, Octokit, PackageVersion } from '../src/types'
 
 // Mock @actions/core
 vi.mock('@actions/core')

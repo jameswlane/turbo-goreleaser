@@ -1,16 +1,50 @@
 import * as core from '@actions/core'
 import * as github from '@actions/github'
-import { SemanticReleaseParser } from './semantic-release'
-import { TurboIntegration } from './turbo-integration'
-import { TagManager } from './tag-manager'
 import { ChangelogGenerator } from './changelog-generator'
 import { GoReleaserConfig } from './goreleaser-config'
+import { SemanticReleaseParser } from './semantic-release'
+import { TagManager } from './tag-manager'
+import { TurboIntegration } from './turbo-integration'
 import type { ActionInputs, ReleaseResult } from './types'
 
 /**
  * The main function for the action.
  * @returns {Promise<void>} Resolves when the action is complete.
  */
+function validateInputs(inputs: ActionInputs): void {
+  const validReleaseTypes = ['all', 'apps', 'packages']
+  const validTagFormats = ['npm', 'slash', 'standard']
+
+  // Set defaults for empty values
+  const releaseType = inputs.releaseType || 'all'
+  const tagFormat = inputs.tagFormat || 'slash'
+
+  if (!validReleaseTypes.includes(releaseType)) {
+    throw new Error(
+      `Invalid release-type: ${releaseType}. Must be one of: ${validReleaseTypes.join(', ')}`
+    )
+  }
+
+  if (!validTagFormats.includes(tagFormat)) {
+    throw new Error(
+      `Invalid tag-format: ${tagFormat}. Must be one of: ${validTagFormats.join(', ')}`
+    )
+  }
+
+  if (inputs.workingDirectory) {
+    if (
+      !inputs.workingDirectory.match(/^[a-zA-Z0-9._/-]+$/) ||
+      inputs.workingDirectory.includes('..')
+    ) {
+      throw new Error('Invalid working-directory: contains unsafe characters')
+    }
+  }
+
+  // Update inputs with defaults
+  inputs.releaseType = releaseType as 'all' | 'apps' | 'packages'
+  inputs.tagFormat = tagFormat as 'npm' | 'slash' | 'standard'
+}
+
 export async function run(): Promise<void> {
   try {
     // Parse inputs
@@ -26,6 +60,9 @@ export async function run(): Promise<void> {
       conventionalCommits: core.getBooleanInput('conventional-commits'),
       workingDirectory: core.getInput('working-directory')
     }
+
+    // Validate inputs
+    validateInputs(inputs)
 
     core.info('🚀 Starting Turbo GoReleaser')
     core.info(`Release type: ${inputs.releaseType}`)
@@ -98,37 +135,41 @@ export async function run(): Promise<void> {
     const changelogs = await changelogGenerator.generate(packageVersions)
     core.endGroup()
 
-    // Step 4: Create tags and releases
+    // Step 4: Create tags and releases (parallel processing)
     core.startGroup('🏷️ Creating tags and releases')
-    const releases: ReleaseResult[] = []
+    const tagAndReleasePromises = packageVersions.map(
+      async (packageVersion): Promise<ReleaseResult> => {
+        const tag = await tagManager.createTag(packageVersion)
+        const release = await tagManager.createRelease(
+          packageVersion,
+          changelogs.get(packageVersion.name) || ''
+        )
 
-    for (const packageVersion of packageVersions) {
-      const tag = await tagManager.createTag(packageVersion)
-      const release = await tagManager.createRelease(
-        packageVersion,
-        changelogs.get(packageVersion.name) || ''
-      )
+        return {
+          package: packageVersion.name,
+          version: packageVersion.newVersion,
+          tag,
+          releaseUrl: release?.html_url || ''
+        }
+      }
+    )
 
-      releases.push({
-        package: packageVersion.name,
-        version: packageVersion.newVersion,
-        tag,
-        releaseUrl: release?.html_url || ''
-      })
-    }
+    const releases = await Promise.all(tagAndReleasePromises)
     core.endGroup()
 
-    // Step 5: Run GoReleaser for applicable packages
+    // Step 5: Run GoReleaser for applicable packages (parallel processing)
     core.startGroup('🚀 Running GoReleaser')
-    const goreleaserArtifacts = []
-
-    for (const packageVersion of packageVersions) {
+    const goreleaserPromises = packageVersions.map(async packageVersion => {
       if (await goreleaserConfig.isGoReleaserProject(packageVersion.path)) {
         const config = await goreleaserConfig.generateConfig(packageVersion)
         const artifacts = await goreleaserConfig.runGoReleaser(packageVersion, config)
-        goreleaserArtifacts.push(...artifacts)
+        return artifacts
       }
-    }
+      return []
+    })
+
+    const goreleaserResults = await Promise.all(goreleaserPromises)
+    const goreleaserArtifacts = goreleaserResults.flat()
     core.endGroup()
 
     // Set outputs
