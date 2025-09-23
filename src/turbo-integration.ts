@@ -227,7 +227,22 @@ export class TurboIntegration {
 
     try {
       // Get the base ref for comparison with validation
-      const baseRef = sanitizeGitRef(process.env['GITHUB_BASE_REF'] || 'HEAD~1')
+      let baseRef = process.env['GITHUB_BASE_REF'] || 'HEAD~1'
+
+      // Validate that the base ref exists, fallback to root commit for single-commit repos
+      try {
+        await exec.getExecOutput(
+          'git',
+          ['rev-parse', '--verify', `${baseRef}^{commit}`],
+          createSafeExecOptions(this.workingDirectory)
+        )
+      } catch {
+        // If HEAD~1 doesn't exist (single commit repo), use empty tree hash
+        core.debug(`Base ref ${baseRef} not found, using empty tree for comparison`)
+        baseRef = '4b825dc642cb6eb9a060e54bf8d69288fbee4904' // Git's empty tree hash
+      }
+
+      baseRef = sanitizeGitRef(baseRef)
 
       // Get list of changed files using git diff --name-status for more info
       const { stdout } = await exec.getExecOutput(

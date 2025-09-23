@@ -14,7 +14,13 @@ import { MIN_NODE_VERSION, REQUIRED_NODE_VERSION_MESSAGE } from './constants'
  */
 function validateNodeVersion(): void {
   const nodeVersion = process.version
-  const majorVersion = Number.parseInt(nodeVersion.slice(1).split('.')[0], 10)
+  const versionMatch = nodeVersion.match(/v?(\d+)\.(\d+)\.(\d+)/)
+
+  if (!versionMatch) {
+    throw new Error(`Invalid Node.js version format: ${nodeVersion}`)
+  }
+
+  const majorVersion = Number.parseInt(versionMatch[1], 10)
 
   if (majorVersion < MIN_NODE_VERSION) {
     throw new Error(`${REQUIRED_NODE_VERSION_MESSAGE}. Current version: ${nodeVersion}`)
