@@ -41,6 +41,7 @@ jobs:
 
       - name: Semantic Release
         uses: cycjimmy/semantic-release-action@v4
+        id: semantic
         with:
           semantic_version: 24
           extra_plugins: |
@@ -48,3 +49,30 @@ jobs:
             @semantic-release/git
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # After a successful release, update the major version tag with dist files
+      - name: Update Major Version Tag
+        if: steps.semantic.outputs.new_release_published == 'true'
+        run: |
+          # Extract major version from the new version
+          VERSION="${{ steps.semantic.outputs.new_release_version }}"
+          MAJOR_VERSION="v${VERSION%%.*}"
+
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Create or checkout the release branch for the major version
+          git checkout -B "release/${MAJOR_VERSION}"
+
+          # Add dist files (removing from gitignore temporarily)
+          sed -i '/^dist\//d' .gitignore
+          sed -i '/\*\/dist\//d' .gitignore
+          git add dist/
+          git commit -m "build: add dist files for ${MAJOR_VERSION}" || echo "No dist changes"
+
+          # Force update the major version tag to this commit
+          git tag -f "${MAJOR_VERSION}"
+
+          # Push the tag
+          git push origin "${MAJOR_VERSION}" --force
