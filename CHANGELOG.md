@@ -1,3 +1,10 @@
+## [1.2.3](https://github.com/jameswlane/turbo-goreleaser/compare/v1.2.2...v1.2.3) (2025-09-25)
+
+
+### Bug Fixes
+
+* allow ~ character in git references for HEAD~1 support ([b7c3ad2](https://github.com/jameswlane/turbo-goreleaser/commit/b7c3ad2a1db40e0e2f596d5b955304c1c5fae648))
+
 ## [1.2.2](https://github.com/jameswlane/turbo-goreleaser/compare/v1.2.1...v1.2.2) (2025-09-25)
 
 
