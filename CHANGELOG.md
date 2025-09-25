@@ -1,3 +1,15 @@
+# [1.1.0](https://github.com/jameswlane/turbo-goreleaser/compare/v1.0.0...v1.1.0) (2025-09-25)
+
+
+### Bug Fixes
+
+* specify entry point in ncc build command to ensure proper dist/index.js generation ([ddb77f5](https://github.com/jameswlane/turbo-goreleaser/commit/ddb77f57af3cbf679988f7eef6f28ba4219da1b4))
+
+
+### Features
+
+* include dist/ directory in repository for GitHub Action ([8f9aab0](https://github.com/jameswlane/turbo-goreleaser/commit/8f9aab055aef4364b789161c11faf10137cc41f4))
+
 # 1.0.0 (2025-09-24)
 
 
