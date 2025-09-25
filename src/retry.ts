@@ -1,8 +1,8 @@
 import * as core from '@actions/core'
 import {
   EXPONENTIAL_BACKOFF_BASE,
-  EXPONENTIAL_BACKOFF_MAX_DELAY,
   EXPONENTIAL_BACKOFF_JITTER,
+  EXPONENTIAL_BACKOFF_MAX_DELAY,
   GITHUB_API_MAX_RETRIES
 } from './constants'
 

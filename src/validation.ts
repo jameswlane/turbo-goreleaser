@@ -1,5 +1,5 @@
-import * as path from 'path'
 import * as core from '@actions/core'
+import * as path from 'path'
 
 // Constants for validation patterns
 const SAFE_PACKAGE_NAME_PATTERN = /^[a-zA-Z0-9-_./@]+$/

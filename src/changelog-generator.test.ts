@@ -1,9 +1,9 @@
 import * as core from '@actions/core'
 import type { Context } from '@actions/github/lib/context'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { apiCache } from '../src/cache'
 import { ChangelogGenerator } from '../src/changelog-generator'
 import type { ChangelogGeneratorConfig, Commit, Octokit, PackageVersion } from '../src/types'
-import { apiCache } from '../src/cache'
 
 // Mock @actions/core
 vi.mock('@actions/core')

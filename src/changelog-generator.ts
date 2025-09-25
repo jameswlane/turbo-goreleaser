@@ -1,9 +1,9 @@
 import * as core from '@actions/core'
 import type { Context } from '@actions/github/lib/context'
-import type { Commit, Octokit, PackageVersion } from './types'
 import { apiCache } from './cache'
-import { retryOnRetryableErrors } from './retry'
 import { GITHUB_API_MAX_RETRIES, MAX_CONCURRENT_OPERATIONS } from './constants'
+import { retryOnRetryableErrors } from './retry'
+import type { Commit, Octokit, PackageVersion } from './types'
 
 export interface ChangelogGeneratorConfig {
   octokit: Octokit

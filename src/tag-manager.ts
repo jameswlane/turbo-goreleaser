@@ -1,10 +1,10 @@
 import * as core from '@actions/core'
 import * as exec from '@actions/exec'
 import type { Context } from '@actions/github/lib/context'
-import type { Octokit, PackageVersion } from './types'
-import { sanitizeTagName, createSafeExecOptions } from './validation'
 import { GIT_PUSH_MAX_RETRIES } from './constants'
 import { retryWithBackoff } from './retry'
+import type { Octokit, PackageVersion } from './types'
+import { createSafeExecOptions, sanitizeTagName } from './validation'
 
 export interface TagManagerConfig {
   octokit: Octokit

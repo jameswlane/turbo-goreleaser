@@ -2,9 +2,9 @@ import * as core from '@actions/core'
 import * as exec from '@actions/exec'
 import conventionalCommitsParser from 'conventional-commits-parser'
 import * as semver from 'semver'
+import { COMMIT_BATCH_SIZE, MAX_COMMITS_TO_ANALYZE } from './constants'
 import type { Commit, Package, PackageVersion } from './types'
-import { sanitizeGitRef, createSafeExecOptions } from './validation'
-import { MAX_COMMITS_TO_ANALYZE, COMMIT_BATCH_SIZE } from './constants'
+import { createSafeExecOptions, sanitizeGitRef } from './validation'
 
 export interface SemanticReleaseConfig {
   enabled: boolean

@@ -3,7 +3,7 @@ import * as path from 'node:path'
 import * as core from '@actions/core'
 import * as exec from '@actions/exec'
 import type { Package } from './types'
-import { sanitizePath, sanitizeGitRef, createSafeExecOptions } from './validation'
+import { createSafeExecOptions, sanitizeGitRef, sanitizePath } from './validation'
 
 export interface TurboIntegrationConfig {
   workingDirectory: string
