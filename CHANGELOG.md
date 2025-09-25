@@ -1,3 +1,10 @@
+## [1.2.5](https://github.com/jameswlane/turbo-goreleaser/compare/v1.2.4...v1.2.5) (2025-09-25)
+
+
+### Bug Fixes
+
+* configure git user before creating tags in GitHub Actions ([eb01772](https://github.com/jameswlane/turbo-goreleaser/commit/eb01772174cfdaf5b634ac4c81abb88233d43c82))
+
 ## [1.2.4](https://github.com/jameswlane/turbo-goreleaser/compare/v1.2.3...v1.2.4) (2025-09-25)
 
 
