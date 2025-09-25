@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/jameswlane/turbo-goreleaser/compare/v1.2.5...v1.3.0) (2025-09-25)
+
+
+### Features
+
+* log action version on startup for better debugging ([bb43534](https://github.com/jameswlane/turbo-goreleaser/commit/bb4353436a5718a35b82504c8f513ce894ca9d34))
+
 ## [1.2.5](https://github.com/jameswlane/turbo-goreleaser/compare/v1.2.4...v1.2.5) (2025-09-25)
 
 

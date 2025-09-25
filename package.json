@@ -1,6 +1,6 @@
 {
   "name": "turbo-goreleaser",
-  "version": "1.2.5",
+  "version": "1.3.0",
   "private": true,
   "description": "Multi-component release automation for TurboRepo with GoReleaser Pro",
   "main": "lib/main.js",
