@@ -101,6 +101,10 @@ function validateInputs(inputs: ActionInputs): void {
 }
 export async function run(): Promise<void> {
   try {
+    // Log action version
+    const packageJson = require('../package.json')
+    core.info(`🚀 Turbo GoReleaser Action v${packageJson.version}`)
+
     // Validate Node version first
     validateNodeVersion()
 
@@ -121,10 +125,11 @@ export async function run(): Promise<void> {
     // Validate inputs
     validateInputs(inputs)
 
-    core.info('🚀 Starting Turbo GoReleaser')
-    core.info(`Release type: ${inputs.releaseType}`)
-    core.info(`Tag format: ${inputs.tagFormat}`)
-    core.info(`Dry run: ${inputs.dryRun}`)
+    core.info('📋 Configuration:')
+    core.info(`  Release type: ${inputs.releaseType}`)
+    core.info(`  Tag format: ${inputs.tagFormat}`)
+    core.info(`  Dry run: ${inputs.dryRun}`)
+    core.info(`  Working directory: ${inputs.workingDirectory}`)
 
     // Set up environment variables for Turbo
     if (inputs.turboToken) {

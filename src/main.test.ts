@@ -205,11 +205,14 @@ describe('main', () => {
     it('should complete full release process successfully', async () => {
       await run()
 
-      // Verify initialization
-      expect(mockedCore.info).toHaveBeenCalledWith('🚀 Starting Turbo GoReleaser')
-      expect(mockedCore.info).toHaveBeenCalledWith('Release type: packages')
-      expect(mockedCore.info).toHaveBeenCalledWith('Tag format: slash')
-      expect(mockedCore.info).toHaveBeenCalledWith('Dry run: false')
+      // Verify initialization - check for version logging and configuration
+      expect(mockedCore.info).toHaveBeenCalledWith(
+        expect.stringMatching(/^🚀 Turbo GoReleaser Action v\d+\.\d+\.\d+$/)
+      )
+      expect(mockedCore.info).toHaveBeenCalledWith('📋 Configuration:')
+      expect(mockedCore.info).toHaveBeenCalledWith('  Release type: packages')
+      expect(mockedCore.info).toHaveBeenCalledWith('  Tag format: slash')
+      expect(mockedCore.info).toHaveBeenCalledWith('  Dry run: false')
 
       // Verify environment variables are set
       expect(mockedCore.exportVariable).toHaveBeenCalledWith('TURBO_TOKEN', 'turbo_token')
@@ -345,7 +348,7 @@ describe('main', () => {
       await run()
 
       expect(mockTurboIntegration.getChangedPackages).toHaveBeenCalledWith('apps')
-      expect(mockedCore.info).toHaveBeenCalledWith('Release type: apps')
+      expect(mockedCore.info).toHaveBeenCalledWith('  Release type: apps')
     })
 
     it('should handle dry run mode', async () => {
@@ -357,7 +360,7 @@ describe('main', () => {
 
       expect(mockedTagManager).toHaveBeenCalledWith(expect.objectContaining({ dryRun: true }))
       expect(mockedGoReleaserConfig).toHaveBeenCalledWith(expect.objectContaining({ dryRun: true }))
-      expect(mockedCore.info).toHaveBeenCalledWith('Dry run: true')
+      expect(mockedCore.info).toHaveBeenCalledWith('  Dry run: true')
     })
 
     it('should handle conventional commits disabled', async () => {
