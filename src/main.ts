@@ -1,4 +1,5 @@
 import * as core from '@actions/core'
+import * as exec from '@actions/exec'
 import * as github from '@actions/github'
 import { ChangelogGenerator } from './changelog-generator'
 import { MIN_NODE_VERSION, REQUIRED_NODE_VERSION_MESSAGE } from './constants'
@@ -8,6 +9,41 @@ import { TagManager } from './tag-manager'
 import { TurboIntegration } from './turbo-integration'
 import type { ActionInputs, ReleaseResult } from './types'
 import { validateWorkingDirectory } from './validation'
+
+/**
+ * Configures git user for GitHub Actions
+ */
+async function configureGitUser(): Promise<void> {
+  try {
+    // Check if git user is already configured
+    const { stdout: userName } = await exec.getExecOutput('git', ['config', 'user.name'], {
+      silent: true,
+      ignoreReturnCode: true
+    })
+
+    const { stdout: userEmail } = await exec.getExecOutput('git', ['config', 'user.email'], {
+      silent: true,
+      ignoreReturnCode: true
+    })
+
+    // If not configured, set default GitHub Actions bot user
+    if (!userName.trim()) {
+      await exec.exec('git', ['config', 'user.name', 'github-actions[bot]'])
+      core.debug('Configured git user.name as github-actions[bot]')
+    }
+
+    if (!userEmail.trim()) {
+      await exec.exec('git', [
+        'config',
+        'user.email',
+        'github-actions[bot]@users.noreply.github.com'
+      ])
+      core.debug('Configured git user.email as github-actions[bot]@users.noreply.github.com')
+    }
+  } catch (error) {
+    core.warning(`Failed to configure git user: ${error}`)
+  }
+}
 
 /**
  * Validates Node.js version
@@ -97,6 +133,9 @@ export async function run(): Promise<void> {
     if (inputs.turboTeam) {
       core.exportVariable('TURBO_TEAM', inputs.turboTeam)
     }
+
+    // Configure git user for GitHub Actions
+    await configureGitUser()
 
     // Initialize components
     const octokit = github.getOctokit(inputs.githubToken)
