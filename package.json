@@ -9,7 +9,7 @@
     "format": "biome format --write",
     "format:check": "biome format",
     "lint": "biome lint --write",
-    "package": "ncc build --source-map --license licenses.txt",
+    "package": "ncc build src/main.ts --source-map --license licenses.txt",
     "start": "node lib/main.js",
     "test": "vitest",
     "test:run": "vitest run",
