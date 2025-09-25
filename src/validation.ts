@@ -5,7 +5,7 @@ import * as core from '@actions/core'
 const SAFE_PACKAGE_NAME_PATTERN = /^[a-zA-Z0-9-_./@]+$/
 const SAFE_TAG_PATTERN = /^[a-zA-Z0-9-_./@]+$/
 const SAFE_PATH_PATTERN = /^[a-zA-Z0-9._\-\/]+$/
-const SAFE_GIT_REF_PATTERN = /^[a-zA-Z0-9-_.\/]+$/
+const SAFE_GIT_REF_PATTERN = /^[a-zA-Z0-9-_.\/:~]+$/
 
 /**
  * Sanitizes package names to prevent command injection
