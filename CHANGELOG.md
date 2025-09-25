@@ -1,3 +1,11 @@
+## [1.2.2](https://github.com/jameswlane/turbo-goreleaser/compare/v1.2.1...v1.2.2) (2025-09-25)
+
+
+### Bug Fixes
+
+* allow legitimate absolute paths in GitHub Actions environment ([38179cc](https://github.com/jameswlane/turbo-goreleaser/commit/38179cc43241367e897cb04b16ef6425f79439a2))
+* update dist files after path validation changes ([f3e97fa](https://github.com/jameswlane/turbo-goreleaser/commit/f3e97fa7bdbc0fd21ed7bbce3fa0f7c0f303bd83))
+
 ## [1.2.1](https://github.com/jameswlane/turbo-goreleaser/compare/v1.2.0...v1.2.1) (2025-09-25)
 
 
