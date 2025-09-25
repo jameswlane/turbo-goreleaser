@@ -1,3 +1,10 @@
+## [1.2.4](https://github.com/jameswlane/turbo-goreleaser/compare/v1.2.3...v1.2.4) (2025-09-25)
+
+
+### Bug Fixes
+
+* update release workflow to include dist files in version tags ([f3b6417](https://github.com/jameswlane/turbo-goreleaser/commit/f3b6417877697428b72a64015ed647955e594bcd))
+
 ## [1.2.3](https://github.com/jameswlane/turbo-goreleaser/compare/v1.2.2...v1.2.3) (2025-09-25)
 
 
