@@ -35140,14 +35140,15 @@ function sanitizeCommandArgs(args) {
  * Validates working directory input
  */
 function validateWorkingDirectory(dir) {
+    const workspacePath = process.env['GITHUB_WORKSPACE'] || process.cwd();
     if (!dir) {
-        return process.cwd();
+        return workspacePath;
     }
     if (!SAFE_PATH_PATTERN.test(dir) || dir.includes('..')) {
         throw new Error('Invalid working-directory: contains unsafe characters');
     }
-    const resolvedPath = path.resolve(process.cwd(), dir);
-    const workspacePath = process.env['GITHUB_WORKSPACE'] || process.cwd();
+    // Resolve relative to workspace, not current working directory
+    const resolvedPath = path.resolve(workspacePath, dir);
     if (!resolvedPath.startsWith(workspacePath)) {
         throw new Error('Working directory must be within the workspace');
     }
