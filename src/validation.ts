@@ -58,15 +58,24 @@ export function sanitizePath(inputPath: string, workspaceRoot: string): string {
   // Normalize the path
   const normalizedPath = path.normalize(inputPath)
 
-  // Check for path traversal attempts
-  if (normalizedPath.includes('..') || normalizedPath.startsWith('/')) {
+  // Check for path traversal attempts in relative paths only
+  if (normalizedPath.includes('..')) {
     throw new Error(`Invalid path: ${inputPath} contains path traversal patterns`)
   }
 
-  // Resolve to absolute path within workspace
+  // If it's an absolute path, validate it directly
+  if (path.isAbsolute(normalizedPath)) {
+    // Ensure the absolute path is within or equal to the workspace
+    if (!normalizedPath.startsWith(workspaceRoot)) {
+      throw new Error(`Path ${inputPath} is outside the workspace`)
+    }
+    return normalizedPath
+  }
+
+  // For relative paths, resolve within workspace
   const absolutePath = path.resolve(workspaceRoot, normalizedPath)
 
-  // Ensure the path is within the workspace
+  // Ensure the resolved path is within the workspace
   if (!absolutePath.startsWith(workspaceRoot)) {
     throw new Error(`Path ${inputPath} is outside the workspace`)
   }
