@@ -1,3 +1,10 @@
+## [1.2.1](https://github.com/jameswlane/turbo-goreleaser/compare/v1.2.0...v1.2.1) (2025-09-25)
+
+
+### Bug Fixes
+
+* resolve working directory path relative to GITHUB_WORKSPACE instead of action directory ([e15a746](https://github.com/jameswlane/turbo-goreleaser/commit/e15a74660a4473bf78b9f50772942def28dee569))
+
 # [1.2.0](https://github.com/jameswlane/turbo-goreleaser/compare/v1.1.0...v1.2.0) (2025-09-25)
 
 
