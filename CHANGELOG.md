@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/jameswlane/turbo-goreleaser/compare/v1.1.0...v1.2.0) (2025-09-25)
+
+
+### Features
+
+* automate major version tag updates with semantic-release ([7b71d89](https://github.com/jameswlane/turbo-goreleaser/commit/7b71d89f903948d6dc6421730999ab48c5473fbc))
+
 # [1.1.0](https://github.com/jameswlane/turbo-goreleaser/compare/v1.0.0...v1.1.0) (2025-09-25)
 
 
