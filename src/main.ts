@@ -107,9 +107,10 @@ function validateInputs(inputs: ActionInputs): void {
 }
 export async function run(): Promise<void> {
   try {
-    // Log action version
+    // Log action version and environment info
     const packageJson = require('../package.json')
     core.info(`🚀 Turbo GoReleaser Action v${packageJson.version}`)
+    core.debug(`Node.js version: ${process.version}`)
 
     // Validate Node version first
     validateNodeVersion()
