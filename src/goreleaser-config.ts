@@ -63,32 +63,51 @@ export class GoReleaserConfig {
   }
 
   async isGoReleaserProject(packagePath: string): Promise<boolean> {
-    // Check for various indicators that this is a GoReleaser project
-    const checks = [
-      // Check for .goreleaser.yml or .goreleaser.yaml
-      path.join(packagePath, '.goreleaser.yml'),
-      path.join(packagePath, '.goreleaser.yaml'),
-      // Check for Go files
-      path.join(packagePath, 'main.go'),
-      path.join(packagePath, 'go.mod'),
-      // Check for Rust files (GoReleaser Pro)
-      path.join(packagePath, 'Cargo.toml'),
-      // Check for other supported languages
-      path.join(packagePath, 'package.json'), // Bun/Deno
-      path.join(packagePath, 'pyproject.toml'), // Python/UV/Poetry
-      path.join(packagePath, 'build.zig') // Zig
+    core.debug(`Checking if ${packagePath} is a GoReleaser project`)
+
+    // First check for explicit .goreleaser config files
+    const goreleaserConfigs = [
+      '.goreleaser.yml',
+      '.goreleaser.yaml',
+      '.goreleaser.json',
+      'goreleaser.yml',
+      'goreleaser.yaml'
     ]
 
-    for (const checkPath of checks) {
+    for (const configFile of goreleaserConfigs) {
+      const configPath = path.join(packagePath, configFile)
       try {
-        await fs.access(checkPath)
-        core.debug(`Found ${checkPath} - this appears to be a GoReleaser-compatible project`)
+        await fs.access(configPath)
+        core.info(`Found GoReleaser config at ${configPath} - this IS a GoReleaser project`)
         return true
+      } catch {
+        // Config doesn't exist, continue checking
+      }
+    }
+
+    // If no GoReleaser config found, check if this looks like a Go project
+    // that we should generate a config for
+    const goProjectIndicators = ['main.go', 'go.mod']
+
+    let isGoProject = false
+    for (const indicator of goProjectIndicators) {
+      const indicatorPath = path.join(packagePath, indicator)
+      try {
+        await fs.access(indicatorPath)
+        core.debug(`Found ${indicatorPath} - this is a Go project`)
+        isGoProject = true
+        break
       } catch {
         // File doesn't exist, continue checking
       }
     }
 
+    if (isGoProject) {
+      core.info(`${packagePath} is a Go project and will use GoReleaser for releases`)
+      return true
+    }
+
+    core.debug(`${packagePath} is NOT a GoReleaser project`)
     return false
   }
 
@@ -227,8 +246,12 @@ export class GoReleaserConfig {
 
     if (this.dryRun) {
       args.push('--skip=publish', '--skip=announce')
+    } else {
+      // In production mode, ensure GoReleaser can handle existing releases
+      // The --clean flag will clean up dist directory
+      // GoReleaser will automatically handle updating existing releases
+      core.debug(`Running GoReleaser with tag: ${currentTag}`)
     }
-    // In non-dry-run mode, let GoReleaser handle everything (create release and upload assets)
 
     const execOptions: exec.ExecOptions = {
       cwd: packageVersion.path,

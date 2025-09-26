@@ -70,15 +70,13 @@ describe('GoReleaserConfig', () => {
     const packagePath = '/test/package'
 
     it('should return true when .goreleaser.yml exists', async () => {
-      mockedFs.access
-        .mockRejectedValueOnce(new Error('Not found')) // .goreleaser.yml - found on first try
-        .mockResolvedValueOnce(undefined)
+      mockedFs.access.mockResolvedValueOnce(undefined) // .goreleaser.yml exists
 
       const result = await goreleaserConfig.isGoReleaserProject(packagePath)
 
       expect(result).toBe(true)
-      expect(mockedCore.debug).toHaveBeenCalledWith(
-        'Found /test/package/.goreleaser.yaml - this appears to be a GoReleaser-compatible project'
+      expect(mockedCore.info).toHaveBeenCalledWith(
+        'Found GoReleaser config at /test/package/.goreleaser.yml - this IS a GoReleaser project'
       )
     })
 
@@ -86,30 +84,17 @@ describe('GoReleaserConfig', () => {
       mockedFs.access
         .mockRejectedValueOnce(new Error('Not found')) // .goreleaser.yml
         .mockRejectedValueOnce(new Error('Not found')) // .goreleaser.yaml
+        .mockRejectedValueOnce(new Error('Not found')) // .goreleaser.json
+        .mockRejectedValueOnce(new Error('Not found')) // goreleaser.yml
+        .mockRejectedValueOnce(new Error('Not found')) // goreleaser.yaml
         .mockRejectedValueOnce(new Error('Not found')) // main.go
         .mockResolvedValueOnce(undefined) // go.mod - found
 
       const result = await goreleaserConfig.isGoReleaserProject(packagePath)
 
       expect(result).toBe(true)
-      expect(mockedCore.debug).toHaveBeenCalledWith(
-        'Found /test/package/go.mod - this appears to be a GoReleaser-compatible project'
-      )
-    })
-
-    it('should return true when Cargo.toml exists', async () => {
-      mockedFs.access
-        .mockRejectedValueOnce(new Error('Not found')) // .goreleaser.yml
-        .mockRejectedValueOnce(new Error('Not found')) // .goreleaser.yaml
-        .mockRejectedValueOnce(new Error('Not found')) // main.go
-        .mockRejectedValueOnce(new Error('Not found')) // go.mod
-        .mockResolvedValueOnce(undefined) // Cargo.toml - found
-
-      const result = await goreleaserConfig.isGoReleaserProject(packagePath)
-
-      expect(result).toBe(true)
-      expect(mockedCore.debug).toHaveBeenCalledWith(
-        'Found /test/package/Cargo.toml - this appears to be a GoReleaser-compatible project'
+      expect(mockedCore.info).toHaveBeenCalledWith(
+        '/test/package is a Go project and will use GoReleaser for releases'
       )
     })
 
@@ -121,19 +106,21 @@ describe('GoReleaserConfig', () => {
       expect(result).toBe(false)
     })
 
-    it('should check all supported file types', async () => {
+    it('should check for GoReleaser config files and Go project files', async () => {
       mockedFs.access.mockRejectedValue(new Error('Not found'))
 
       await goreleaserConfig.isGoReleaserProject(packagePath)
 
+      // Should check for GoReleaser config files first
       expect(mockedFs.access).toHaveBeenCalledWith('/test/package/.goreleaser.yml')
       expect(mockedFs.access).toHaveBeenCalledWith('/test/package/.goreleaser.yaml')
+      expect(mockedFs.access).toHaveBeenCalledWith('/test/package/.goreleaser.json')
+      expect(mockedFs.access).toHaveBeenCalledWith('/test/package/goreleaser.yml')
+      expect(mockedFs.access).toHaveBeenCalledWith('/test/package/goreleaser.yaml')
+
+      // Should check for Go project indicators
       expect(mockedFs.access).toHaveBeenCalledWith('/test/package/main.go')
       expect(mockedFs.access).toHaveBeenCalledWith('/test/package/go.mod')
-      expect(mockedFs.access).toHaveBeenCalledWith('/test/package/Cargo.toml')
-      expect(mockedFs.access).toHaveBeenCalledWith('/test/package/package.json')
-      expect(mockedFs.access).toHaveBeenCalledWith('/test/package/pyproject.toml')
-      expect(mockedFs.access).toHaveBeenCalledWith('/test/package/build.zig')
     })
   })
 
