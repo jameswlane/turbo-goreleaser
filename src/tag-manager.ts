@@ -11,6 +11,7 @@ export interface TagManagerConfig {
   context: Context
   tagFormat: 'npm' | 'slash' | 'standard'
   dryRun: boolean
+  workingDirectory: string
 }
 
 export class TagManager {
@@ -18,12 +19,14 @@ export class TagManager {
   private context: Context
   private tagFormat: 'npm' | 'slash' | 'standard'
   private dryRun: boolean
+  private workingDirectory: string
 
   constructor(config: TagManagerConfig) {
     this.octokit = config.octokit
     this.context = config.context
     this.tagFormat = config.tagFormat
     this.dryRun = config.dryRun
+    this.workingDirectory = config.workingDirectory
   }
 
   async createTag(packageVersion: PackageVersion): Promise<string> {
@@ -49,7 +52,11 @@ export class TagManager {
         ''
       )
 
-      await exec.exec('git', ['tag', '-a', safeTagName, '-m', safeMessage], createSafeExecOptions())
+      await exec.exec(
+        'git',
+        ['tag', '-a', safeTagName, '-m', safeMessage],
+        createSafeExecOptions(this.workingDirectory)
+      )
 
       // Push the tag to remote with retry logic
       await this.pushTagWithRetry(safeTagName)
@@ -153,7 +160,7 @@ export class TagManager {
         'git',
         ['rev-parse', `refs/tags/${safeTagName}`],
         {
-          ...createSafeExecOptions(),
+          ...createSafeExecOptions(this.workingDirectory),
           ignoreReturnCode: true
         }
       )
@@ -186,7 +193,11 @@ export class TagManager {
 
     await retryWithBackoff(
       async () => {
-        await exec.exec('git', ['push', 'origin', safeTagName], createSafeExecOptions())
+        await exec.exec(
+          'git',
+          ['push', 'origin', safeTagName],
+          createSafeExecOptions(this.workingDirectory)
+        )
       },
       {
         maxAttempts: maxRetries,

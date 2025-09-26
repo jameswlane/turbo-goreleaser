@@ -13,31 +13,37 @@ import { validateWorkingDirectory } from './validation'
 /**
  * Configures git user for GitHub Actions
  */
-async function configureGitUser(): Promise<void> {
+async function configureGitUser(workingDirectory: string): Promise<void> {
   try {
     // Check if git user is already configured
     const { stdout: userName } = await exec.getExecOutput('git', ['config', 'user.name'], {
+      cwd: workingDirectory,
       silent: true,
       ignoreReturnCode: true
     })
 
     const { stdout: userEmail } = await exec.getExecOutput('git', ['config', 'user.email'], {
+      cwd: workingDirectory,
       silent: true,
       ignoreReturnCode: true
     })
 
     // If not configured, set default GitHub Actions bot user
     if (!userName.trim()) {
-      await exec.exec('git', ['config', 'user.name', 'github-actions[bot]'])
+      await exec.exec('git', ['config', 'user.name', 'github-actions[bot]'], {
+        cwd: workingDirectory
+      })
       core.debug('Configured git user.name as github-actions[bot]')
     }
 
     if (!userEmail.trim()) {
-      await exec.exec('git', [
-        'config',
-        'user.email',
-        'github-actions[bot]@users.noreply.github.com'
-      ])
+      await exec.exec(
+        'git',
+        ['config', 'user.email', 'github-actions[bot]@users.noreply.github.com'],
+        {
+          cwd: workingDirectory
+        }
+      )
       core.debug('Configured git user.email as github-actions[bot]@users.noreply.github.com')
     }
   } catch (error) {
@@ -139,8 +145,8 @@ export async function run(): Promise<void> {
       core.exportVariable('TURBO_TEAM', inputs.turboTeam)
     }
 
-    // Configure git user for GitHub Actions
-    await configureGitUser()
+    // Configure git user for GitHub Actions (in the repository directory)
+    await configureGitUser(inputs.workingDirectory)
 
     // Initialize components
     const octokit = github.getOctokit(inputs.githubToken)
@@ -158,7 +164,8 @@ export async function run(): Promise<void> {
       octokit,
       context,
       tagFormat: inputs.tagFormat,
-      dryRun: inputs.dryRun
+      dryRun: inputs.dryRun,
+      workingDirectory: inputs.workingDirectory
     })
 
     const changelogGenerator = new ChangelogGenerator({

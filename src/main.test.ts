@@ -225,7 +225,8 @@ describe('main', () => {
         octokit: mockOctokit,
         context: mockContext,
         tagFormat: 'slash',
-        dryRun: false
+        dryRun: false,
+        workingDirectory: '/github/workspace'
       })
       expect(mockedChangelogGenerator).toHaveBeenCalledWith({
         octokit: mockOctokit,

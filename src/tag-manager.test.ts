@@ -37,6 +37,9 @@ describe('TagManager', () => {
   beforeEach(() => {
     vi.clearAllMocks()
 
+    // Mock GITHUB_WORKSPACE environment variable for tests
+    process.env['GITHUB_WORKSPACE'] = '/test/workspace'
+
     mockOctokit = {
       rest: {
         repos: {
@@ -60,7 +63,8 @@ describe('TagManager', () => {
       octokit: mockOctokit,
       context: mockContext,
       tagFormat: 'slash',
-      dryRun: false
+      dryRun: false,
+      workingDirectory: '/test/workspace'
     }
 
     tagManager = new TagManager(defaultConfig)
@@ -68,6 +72,7 @@ describe('TagManager', () => {
 
   afterEach(() => {
     vi.restoreAllMocks()
+    delete process.env['GITHUB_WORKSPACE']
   })
 
   describe('constructor', () => {
