@@ -1,3 +1,10 @@
+## [1.3.3](https://github.com/jameswlane/turbo-goreleaser/compare/v1.3.2...v1.3.3) (2025-09-26)
+
+
+### Bug Fixes
+
+* add Node.js version debug logging for better diagnostics ([303f2a0](https://github.com/jameswlane/turbo-goreleaser/commit/303f2a0666f845b6f09c65fa7993fe5cb2f66789))
+
 ## [1.3.2](https://github.com/jameswlane/turbo-goreleaser/compare/v1.3.1...v1.3.2) (2025-09-26)
 
 
