@@ -1,3 +1,10 @@
+## [1.3.1](https://github.com/jameswlane/turbo-goreleaser/compare/v1.3.0...v1.3.1) (2025-09-26)
+
+
+### Bug Fixes
+
+* ensure git operations use correct working directory in GitHub Actions ([8333c92](https://github.com/jameswlane/turbo-goreleaser/commit/8333c923aca2ec918c0e242570eefe9dd80fd47a))
+
 # [1.3.0](https://github.com/jameswlane/turbo-goreleaser/compare/v1.2.5...v1.3.0) (2025-09-25)
 
 
