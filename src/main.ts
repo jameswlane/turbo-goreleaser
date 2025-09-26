@@ -212,10 +212,22 @@ export async function run(): Promise<void> {
     const tagAndReleasePromises = packageVersions.map(
       async (packageVersion): Promise<ReleaseResult> => {
         const tag = await tagManager.createTag(packageVersion)
-        const release = await tagManager.createRelease(
-          packageVersion,
-          changelogs.get(packageVersion.name) || ''
-        )
+
+        // Only create GitHub release if this is NOT a GoReleaser project
+        // GoReleaser will handle release creation for those packages
+        const hasGoReleaser = await goreleaserConfig.isGoReleaserProject(packageVersion.path)
+        let release = null
+
+        if (!hasGoReleaser) {
+          release = await tagManager.createRelease(
+            packageVersion,
+            changelogs.get(packageVersion.name) || ''
+          )
+        } else {
+          core.info(
+            `Skipping GitHub release creation for ${packageVersion.name} - GoReleaser will handle it`
+          )
+        }
 
         return {
           package: packageVersion.name,

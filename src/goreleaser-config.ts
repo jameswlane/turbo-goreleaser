@@ -43,6 +43,7 @@ interface GoReleaserYaml {
     name_template?: string
     draft?: boolean
     prerelease?: string
+    mode?: string
   }
   changelog?: {
     use?: string
@@ -227,6 +228,7 @@ export class GoReleaserConfig {
     if (this.dryRun) {
       args.push('--skip=publish', '--skip=announce')
     }
+    // In non-dry-run mode, let GoReleaser handle everything (create release and upload assets)
 
     const execOptions: exec.ExecOptions = {
       cwd: packageVersion.path,

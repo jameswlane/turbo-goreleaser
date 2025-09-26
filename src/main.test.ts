@@ -245,10 +245,10 @@ describe('main', () => {
 
       // Verify tags and releases created
       expect(mockTagManager.createTag).toHaveBeenCalledTimes(2)
-      expect(mockTagManager.createRelease).toHaveBeenCalledTimes(2)
+      expect(mockTagManager.createRelease).toHaveBeenCalledTimes(0) // No releases for GoReleaser projects
 
-      // Verify GoReleaser execution
-      expect(mockGoreleaserConfig.isGoReleaserProject).toHaveBeenCalledTimes(2)
+      // Verify GoReleaser execution (called in both step 4 and step 5)
+      expect(mockGoreleaserConfig.isGoReleaserProject).toHaveBeenCalledTimes(4)
       expect(mockGoreleaserConfig.generateConfig).toHaveBeenCalledTimes(2)
       expect(mockGoreleaserConfig.runGoReleaser).toHaveBeenCalledTimes(2)
 
@@ -266,7 +266,7 @@ describe('main', () => {
 
       await run()
 
-      expect(mockGoreleaserConfig.isGoReleaserProject).toHaveBeenCalledTimes(2)
+      expect(mockGoreleaserConfig.isGoReleaserProject).toHaveBeenCalledTimes(4) // Called in both steps 4 and 5
       expect(mockGoreleaserConfig.generateConfig).not.toHaveBeenCalled()
       expect(mockGoreleaserConfig.runGoReleaser).not.toHaveBeenCalled()
       expect(mockedCore.setOutput).toHaveBeenCalledWith('goreleaser-artifacts', '[]')
@@ -274,8 +274,10 @@ describe('main', () => {
 
     it('should handle mixed GoReleaser projects', async () => {
       mockGoreleaserConfig.isGoReleaserProject
-        .mockResolvedValueOnce(true) // First package is GoReleaser project
-        .mockResolvedValueOnce(false) // Second package is not
+        .mockResolvedValueOnce(true) // First package step 4
+        .mockResolvedValueOnce(false) // Second package step 4
+        .mockResolvedValueOnce(true) // First package step 5
+        .mockResolvedValueOnce(false) // Second package step 5
 
       await run()
 
