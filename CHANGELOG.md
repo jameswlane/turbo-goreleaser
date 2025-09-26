@@ -1,3 +1,10 @@
+## [1.3.5](https://github.com/jameswlane/turbo-goreleaser/compare/v1.3.4...v1.3.5) (2025-09-26)
+
+
+### Bug Fixes
+
+* trigger release with GoReleaser detection improvements ([d8b8383](https://github.com/jameswlane/turbo-goreleaser/commit/d8b83839b634bd62f3839f46074eb4917391ac36))
+
 ## [1.3.4](https://github.com/jameswlane/turbo-goreleaser/compare/v1.3.3...v1.3.4) (2025-09-26)
 
 
