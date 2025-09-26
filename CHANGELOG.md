@@ -1,3 +1,10 @@
+## [1.3.2](https://github.com/jameswlane/turbo-goreleaser/compare/v1.3.1...v1.3.2) (2025-09-26)
+
+
+### Bug Fixes
+
+* let GoReleaser handle releases entirely for GoReleaser projects ([563ae26](https://github.com/jameswlane/turbo-goreleaser/commit/563ae2687204ec57c303027342eca4571b9ba7aa))
+
 ## [1.3.1](https://github.com/jameswlane/turbo-goreleaser/compare/v1.3.0...v1.3.1) (2025-09-26)
 
 
