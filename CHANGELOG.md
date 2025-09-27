@@ -1,3 +1,10 @@
+## [1.3.6](https://github.com/jameswlane/turbo-goreleaser/compare/v1.3.5...v1.3.6) (2025-09-27)
+
+
+### Bug Fixes
+
+* improve major version tag automation and remove conflicting systems ([da86b9d](https://github.com/jameswlane/turbo-goreleaser/commit/da86b9d0e64b5a586c437e5e6b0c8a33db432325))
+
 ## [1.3.5](https://github.com/jameswlane/turbo-goreleaser/compare/v1.3.4...v1.3.5) (2025-09-26)
 
 
