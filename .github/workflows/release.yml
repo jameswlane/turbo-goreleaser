@@ -54,25 +54,53 @@ jobs:
       - name: Update Major Version Tag
         if: steps.semantic.outputs.new_release_published == 'true'
         run: |
-          # Extract major version from the new version
+          # Extract major version from the new version (e.g., 1.3.5 -> v1, 2.0.0 -> v2)
           VERSION="${{ steps.semantic.outputs.new_release_version }}"
           MAJOR_VERSION="v${VERSION%%.*}"
 
-          # Configure git
+          echo "🏷️ Processing version ${VERSION} -> ${MAJOR_VERSION}"
+
+          # Configure git with proper authentication
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           # Create or checkout the release branch for the major version
+          echo "📝 Creating release branch: release/${MAJOR_VERSION}"
           git checkout -B "release/${MAJOR_VERSION}"
 
-          # Add dist files (removing from gitignore temporarily)
+          # Ensure dist files are built and up to date
+          echo "🔧 Ensuring dist files are current"
+          npm run package
+
+          # Add dist files to the release branch (temporarily modify gitignore)
+          echo "📦 Adding dist files to release branch"
+          cp .gitignore .gitignore.backup
           sed -i '/^dist\//d' .gitignore
           sed -i '/\*\/dist\//d' .gitignore
-          git add dist/
-          git commit -m "build: add dist files for ${MAJOR_VERSION}" || echo "No dist changes"
 
-          # Force update the major version tag to this commit
+          git add dist/
+          git add .gitignore
+
+          # Commit dist files if there are changes
+          if git diff --staged --quiet; then
+            echo "ℹ️ No changes to dist files"
+          else
+            git commit -m "build: add dist files for ${MAJOR_VERSION}"
+            echo "✅ Committed dist files for ${MAJOR_VERSION}"
+          fi
+
+          # Restore original gitignore
+          mv .gitignore.backup .gitignore
+          git add .gitignore
+          git commit -m "build: restore gitignore after dist addition" || echo "No gitignore changes"
+
+          # Force update the major version tag to this commit (with dist files)
+          echo "🏷️ Updating tag ${MAJOR_VERSION} to point to release branch"
           git tag -f "${MAJOR_VERSION}"
 
-          # Push the tag
+          # Push the release branch and tag
+          echo "🚀 Pushing release branch and tag"
+          git push origin "release/${MAJOR_VERSION}" --force
           git push origin "${MAJOR_VERSION}" --force
+
+          echo "✅ Successfully updated ${MAJOR_VERSION} tag with dist files"
