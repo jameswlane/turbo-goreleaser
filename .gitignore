@@ -3,7 +3,6 @@ node_modules/
 
 # Build outputs
 lib/
-dist/
 *.tsbuildinfo
 
 # Test coverage
@@ -40,4 +39,3 @@ Thumbs.db
 
 # GoReleaser
 .goreleaser.generated.yml
-*/dist/
